@@ -1,0 +1,48 @@
+﻿<!DOCTYPE html>
+<!-- Просмотрщик книги для Поля HTML-документа 1С. Страницы предрендерены в PNG
+     (движок поля не рисует PDF.js-глифы на canvas, но надёжно показывает <img>).
+     Сервер (Обработка.ПросмотрКниги.ManagerModule) подставляет {{...}}:
+     {{ИМЯ_КНИГИ}} {{НОМЕР}} {{ВСЕГО}} {{СОДЕРЖИМОЕ}} {{КЛАСС_ПРЕД}} {{КЛАСС_СЛЕД}}.
+     Листание - якоря data-act=пред/след, обрабатываются в форме (перестроение HTML). -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;height:100%;background:#202226;color:#e8eaed;
+    font-family:"Segoe UI",Arial,sans-serif;font-size:14px;overflow:hidden;}
+  #app{display:flex;flex-direction:column;height:100%;}
+  .toolbar{display:flex;align-items:center;gap:12px;padding:8px 14px;
+    background:#2b2e33;border-bottom:1px solid #3a3d42;flex:0 0 auto;}
+  .book-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%;}
+  .spacer{flex:1 1 auto;}
+  .pager{display:flex;align-items:center;gap:8px;}
+  .pg-ind{min-width:62px;text-align:center;color:#b8bcc2;}
+  a.nav{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;
+    border:1px solid #4a4d52;border-radius:6px;background:#34373d;color:#e8eaed;text-decoration:none;}
+  a.nav.disabled{opacity:.4;pointer-events:none;}
+  a.nav svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .stage{flex:1 1 auto;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:16px;}
+  .stage img{max-width:100%;height:auto;background:#fff;box-shadow:0 2px 16px rgba(0,0,0,.5);}
+  .msg{margin:auto;padding:48px;color:#b8bcc2;text-align:center;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="toolbar">
+    <div class="book-name">{{ИМЯ_КНИГИ}}</div>
+    <div class="spacer"></div>
+    <div class="pager">
+      <a class="nav {{КЛАСС_ПРЕД}}" href="#" data-act="пред" title="Предыдущая страница">
+        <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"></polyline></svg>
+      </a>
+      <span class="pg-ind">{{НОМЕР}} / {{ВСЕГО}}</span>
+      <a class="nav {{КЛАСС_СЛЕД}}" href="#" data-act="след" title="Следующая страница">
+        <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"></polyline></svg>
+      </a>
+    </div>
+  </div>
+  <div class="stage">{{СОДЕРЖИМОЕ}}</div>
+</div>
+</body>
+</html>

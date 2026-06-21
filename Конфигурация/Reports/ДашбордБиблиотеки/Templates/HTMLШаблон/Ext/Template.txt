@@ -1,0 +1,208 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Встроенная библиотека — учебные издания</title>
+<style>
+:root{
+  --bg:#eef1f5;--surface:#ffffff;--border:#dfe4ea;--text:#26323d;--muted:#6b7a8a;
+  --navy:#1f4e79;--navy2:#2b5d8a;--blue:#2f6fb3;--green:#4f9d69;--orange:#e08a2e;
+  --red:#c8553d;--purple:#8a7bb8;--yellow:#f2b134;
+  --radius:8px;--shadow:0 1px 3px rgba(31,46,64,.10),0 1px 2px rgba(31,46,64,.05);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PT Sans","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.45}
+.dashboard{padding:20px}
+.topbar{background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;border-radius:var(--radius);
+  padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
+.topbar-title{font-size:18px;font-weight:700;margin:0}
+.topbar-subtitle{font-size:12px;color:#cdddf0;margin-top:4px}
+.avatar{width:46px;height:46px;border-radius:50%;background:var(--yellow);color:#5a4500;font-weight:700;
+  display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+.toolbar{display:flex;gap:10px;align-items:center;margin:16px 0;flex-wrap:wrap}
+.search{flex:1;min-width:220px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:9px 14px}
+.search input{border:none;outline:none;font-size:13px;color:var(--text);width:100%;background:transparent}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:12px;
+  color:var(--text);white-space:nowrap;box-shadow:var(--shadow);cursor:pointer}
+.chip.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.theme-block{margin-bottom:18px}
+.theme-title{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;
+  margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid #e3e9f0}
+.books{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.book{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;text-decoration:none;color:inherit;cursor:pointer}
+.book:hover{border-color:var(--blue);box-shadow:0 2px 8px rgba(31,46,64,.18)}
+.book-cover{flex:none;width:58px;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:24px}
+.book-body{padding:12px 14px;min-width:0}
+.book-name{font-size:13px;font-weight:700;overflow-wrap:anywhere}
+.book-author{font-size:11.5px;color:var(--muted);margin-top:3px}
+.mat-kind{display:inline-block;font-size:10.5px;color:#fff;background:var(--blue);border-radius:12px;
+  padding:2px 9px;white-space:nowrap;margin-top:7px}
+.mat-kind.spravochnik{background:var(--green)}
+.mat-kind.metod{background:var(--orange)}
+.mat-kind.norm{background:var(--purple)}
+.mat-kind.video{background:var(--red)}
+.book-desc{font-size:12px;color:var(--text);margin-top:8px}
+.book-gost{font-size:11px;color:var(--muted);background:#f6f8fb;border:1px solid var(--border);border-radius:6px;
+  padding:7px 9px;margin-top:8px;line-height:1.5}
+.book-meta{font-size:11px;color:var(--muted);margin-top:6px}
+.book-tags{margin-top:6px}
+.tag{display:inline-block;background:#eef4fa;color:var(--blue);border:1px solid #d4e4f2;border-radius:12px;
+  padding:2px 9px;font-size:10.5px;margin:0 4px 4px 0}
+.empty-state{color:var(--muted);text-align:center;padding:30px 0;font-size:13px}
+.footer{margin-top:14px;font-size:11px;color:var(--muted);text-align:right}
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="lib-title">Встроенная библиотека</div>
+      <div class="topbar-subtitle" id="lib-sub"></div>
+    </div>
+    <div class="avatar"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.3 5 7.7 4.5 4 4.5V18c3.7 0 6.3.5 8 2 1.7-1.5 4.3-2 8-2V4.5c-3.7 0-6.3.5-8 2Z"/><path d="M12 6.5V20"/></svg></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7a8a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="q" type="text" placeholder="Поиск по названию, автору, ключевым словам, теме…">
+    </div>
+    <span class="chip active" data-kind="">Вид: все</span>
+    <span class="chip" data-kind="Учебник">Учебник</span>
+    <span class="chip" data-kind="Справочник">Справочник</span>
+    <span class="chip" data-kind="МетодическоеПособие">Метод. пособие</span>
+    <span class="chip" data-kind="НормативныйДокумент">Норм. документ</span>
+  </div>
+
+  <div id="lib-body"><div class="empty-state">Загрузка…</div></div>
+  <div class="footer">Хранение файлов: тома БСП «Работа с файлами» · клик по чипу — фильтр по виду</div>
+</div>
+
+<script id="dashboard-data" type="application/json">{{DASHBOARD_DATA}}</script>
+<script>
+var MOCK_DATA = {
+  Заголовок:"Встроенная библиотека учебных материалов по «1С:Предприятие 8.3»",
+  ВсегоМатериалов:2,
+  Группы:[
+    {Тема:"Объекты метаданных",Материалы:[
+      {Название:"1С:Предприятие 8.3. Практическое пособие разработчика",Автор:"Радченко М. Г., Хрусталёва Е. Ю.",Вид:"Учебник",Год:2019,Издательство:"1С-Паблишинг",ISBN:"978-5-9677-2843-5",Библиография:"Радченко М. Г., Хрусталёва Е. Ю. Практическое пособие разработчика. — М.: 1С-Паблишинг, 2019.",Описание:"Базовое пособие по разработке прикладных решений.",КлючевыеСлова:"метаданные; формы; запросы",Тема:"Объекты метаданных",МатериалИД:""}
+    ]},
+    {Тема:"Язык запросов",Материалы:[
+      {Название:"Язык запросов 1С:Предприятие 8",Автор:"Хрусталёва Е. Ю.",Вид:"Справочник",Год:2017,Издательство:"1С-Паблишинг",ISBN:"978-5-9677-2725-4",Библиография:"Хрусталёва Е. Ю. Язык запросов. — М.: 1С-Паблишинг, 2017.",Описание:"Руководство по языку запросов.",КлючевыеСлова:"запросы; соединения; итоги",Тема:"Язык запросов",МатериалИД:""}
+    ]}
+  ]
+};
+
+function readData(){
+  var el = document.getElementById('dashboard-data');
+  var raw = el ? String(el.textContent || '').trim() : '';
+  try { return (raw.indexOf('{{') === 0 || raw === '') ? MOCK_DATA : JSON.parse(raw); }
+  catch(e){ return MOCK_DATA; }
+}
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function kindClass(v){
+  var k = String(v || '');
+  if (k.indexOf('Справочник') >= 0) return 'spravochnik';
+  if (k.indexOf('Метод') >= 0) return 'metod';
+  if (k.indexOf('Норм') >= 0) return 'norm';
+  if (k.indexOf('Видео') >= 0) return 'video';
+  return '';
+}
+function kindLabel(v){
+  var m = {'МетодическоеПособие':'Метод. пособие','НормативныйДокумент':'Норм. документ','Видеоматериал':'Видео'};
+  return m[v] || v;
+}
+function bookCard(b){
+  var sub = [];
+  if (b.Автор) sub.push(esc(b.Автор));
+  if (b.Год) sub.push(esc(b.Год));
+  if (b.Издательство) sub.push(esc(b.Издательство));
+  var tags = '';
+  if (b.КлючевыеСлова){
+    var kw = String(b.КлючевыеСлова).split(/[;,]/);
+    for (var i=0;i<kw.length && i<5;i++){ var t = kw[i].replace(/^\s+|\s+$/g,''); if (t) tags += '<span class="tag">'+esc(t)+'</span>'; }
+  }
+  var meta = [];
+  if (b.ISBN) meta.push('ISBN '+esc(b.ISBN));
+  return '<a class="book" href="#" data-act="материал" data-id="'+esc(b.МатериалИД||'')+'" data-kind="'+esc(b.Вид)+'" data-search="'+esc(((b.Название||'')+' '+(b.Автор||'')+' '+(b.КлючевыеСлова||'')+' '+(b.Тема||'')).toLowerCase())+'">'
+    + '<div class="book-cover"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.3 5 7.7 4.5 4 4.5V18c3.7 0 6.3.5 8 2 1.7-1.5 4.3-2 8-2V4.5c-3.7 0-6.3.5-8 2Z"/><path d="M12 6.5V20"/></svg></div>'
+    + '<div class="book-body">'
+    + '<div class="book-name">'+esc(b.Название)+'</div>'
+    + '<div class="book-author">'+sub.join(' · ')+'</div>'
+    + '<span class="mat-kind '+kindClass(b.Вид)+'">'+esc(kindLabel(b.Вид))+'</span>'
+    + (b.Описание ? '<div class="book-desc">'+esc(b.Описание)+'</div>' : '')
+    + (b.Библиография ? '<div class="book-gost">'+esc(b.Библиография)+'</div>' : '')
+    + (meta.length ? '<div class="book-meta">'+meta.join(' · ')+'</div>' : '')
+    + (tags ? '<div class="book-tags">'+tags+'</div>' : '')
+    + '</div></a>';
+}
+function render(data){
+  document.getElementById('lib-title').textContent = data.Заголовок || 'Встроенная библиотека';
+  document.getElementById('lib-sub').textContent = 'Всего изданий: ' + (data.ВсегоМатериалов || 0) + ' · сгруппировано по темам платформы 1С:Предприятие 8.3';
+  var groups = data.Группы || [];
+  var body = document.getElementById('lib-body');
+  if (!groups.length){ body.innerHTML = '<div class="empty-state">В библиотеке пока нет материалов.</div>'; return; }
+  var h = [];
+  for (var g=0; g<groups.length; g++){
+    var grp = groups[g];
+    var mats = grp.Материалы || [];
+    h.push('<div class="theme-block"><div class="theme-title">'+esc(grp.Тема)+' · '+mats.length+'</div><div class="books">');
+    for (var m=0; m<mats.length; m++) h.push(bookCard(mats[m]));
+    h.push('</div></div>');
+  }
+  body.innerHTML = h.join('');
+}
+function applyFilters(){
+  var qEl = document.getElementById('q');
+  var q = qEl ? String(qEl.value || '').toLowerCase().replace(/^\s+|\s+$/g,'') : '';
+  var activeChip = document.querySelector('.chip.active');
+  var kind = activeChip ? (activeChip.getAttribute('data-kind') || '') : '';
+  var books = document.querySelectorAll('.book');
+  for (var i=0;i<books.length;i++){
+    var b = books[i];
+    var okKind = !kind || b.getAttribute('data-kind') === kind;
+    var okSearch = !q || String(b.getAttribute('data-search') || '').indexOf(q) >= 0;
+    b.style.display = (okKind && okSearch) ? '' : 'none';
+  }
+  // Скрыть пустые блоки тем.
+  var blocks = document.querySelectorAll('.theme-block');
+  for (var j=0;j<blocks.length;j++){
+    var vis = blocks[j].querySelectorAll('.book');
+    var any = false;
+    for (var k=0;k<vis.length;k++){ if (vis[k].style.display !== 'none'){ any = true; break; } }
+    blocks[j].style.display = any ? '' : 'none';
+  }
+}
+function wireUI(){
+  var qEl = document.getElementById('q');
+  if (qEl) qEl.addEventListener('input', applyFilters);
+  var chips = document.querySelectorAll('.chip');
+  for (var i=0;i<chips.length;i++){
+    chips[i].addEventListener('click', function(ev){
+      var all = document.querySelectorAll('.chip');
+      for (var j=0;j<all.length;j++) all[j].className = 'chip';
+      ev.currentTarget.className = 'chip active';
+      applyFilters();
+    });
+  }
+  // Клик по карточке издания - якорь data-act="материал". Гасим переход по href="#";
+  // открытие материала выполняет форма (обработчик ПолеHTMLПриНажатии по этому якорю).
+  document.addEventListener('click', function(ev){
+    var a = ev.target;
+    while (a && a.nodeType===1 && !(a.getAttribute && a.getAttribute('data-act'))) a = a.parentNode;
+    if (a && a.nodeType===1 && a.getAttribute && a.getAttribute('data-act') === 'материал') ev.preventDefault();
+  }, false);
+}
+(function(){
+  try { render(readData()); }
+  catch(e){ var b = document.getElementById('lib-body'); if (b) b.innerHTML = '<div class="empty-state">Ошибка отображения: '+esc(e.message)+'</div>'; }
+  // Интерактивность (поиск/фильтры) - необязательна: ошибки не должны ломать показ списка.
+  try { wireUI(); } catch(e2){}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Form xmlns="http://v8.1c.ru/8.3/xcf/logform" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:dcssch="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcsset="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.20">
+	<Title>
+		<v8:item>
+			<v8:lang>ru</v8:lang>
+			<v8:content>Рабочий стол обучающегося</v8:content>
+		</v8:item>
+	</Title>
+	<ShowTitle>false</ShowTitle>
+	<AutoCommandBar name="ФормаКоманднаяПанель" id="-1"/>
+	<Events>
+		<Event name="OnCreateAtServer">ПриСозданииНаСервере</Event>
+	</Events>
+	<ChildItems>
+		<InputField name="РекомендуемаяТемаПоле" id="10">
+			<DataPath>РекомендуемаяТема</DataPath>
+			<ReadOnly>true</ReadOnly>
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Рекомендуемая тема</v8:content>
+				</v8:item>
+			</Title>
+			<ContextMenu name="РекомендуемаяТемаПолеКонтекстноеМеню" id="13"/>
+			<ExtendedTooltip name="РекомендуемаяТемаПолеРасширеннаяПодсказка" id="14"/>
+		</InputField>
+		<Button name="НачатьСессиюКнопка" id="11">
+			<Type>UsualButton</Type>
+			<CommandName>Form.Command.НачатьСессию</CommandName>
+			<ExtendedTooltip name="НачатьСессиюКнопкаРасширеннаяПодсказка" id="16"/>
+		</Button>
+		<Button name="ОткрытьДашбордКнопка" id="12">
+			<Type>UsualButton</Type>
+			<CommandName>Form.Command.ОткрытьДашборд</CommandName>
+			<ExtendedTooltip name="ОткрытьДашбордКнопкаРасширеннаяПодсказка" id="17"/>
+		</Button>
+	</ChildItems>
+	<Attributes>
+		<Attribute name="РекомендуемаяТема" id="100">
+			<Type>
+				<v8:Type>cfg:CatalogRef.Темы</v8:Type>
+			</Type>
+		</Attribute>
+		<Attribute name="ТекущийКурс" id="101">
+			<Type>
+				<v8:Type>cfg:CatalogRef.Курсы</v8:Type>
+			</Type>
+		</Attribute>
+	</Attributes>
+	<Commands>
+		<Command name="НачатьСессию" id="1">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Начать сессию</v8:content>
+				</v8:item>
+			</Title>
+			<Action>НачатьСессиюВыполнить</Action>
+		</Command>
+		<Command name="ОткрытьДашборд" id="2">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Открыть дашборд</v8:content>
+				</v8:item>
+			</Title>
+			<Action>ОткрытьДашбордВыполнить</Action>
+		</Command>
+	</Commands>
+</Form>

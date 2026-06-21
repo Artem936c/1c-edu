@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд преподавателя</title>
+    <!-- Standalone-превью: Chart.js с CDN (в 1С отгружается инлайн+ES2017, см. Template.txt). -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root{
+            --bg:#eef1f5;--surface:#ffffff;--border:#dfe4ea;--text:#26323d;--muted:#6b7a8a;
+            --navy:#1f4e79;--navy2:#2b5d8a;--blue:#2f6fb3;--green:#4f9d69;--orange:#e08a2e;
+            --red:#c8553d;--yellow:#f2b134;
+            --radius:8px;--shadow:0 1px 3px rgba(31,46,64,.10),0 1px 2px rgba(31,46,64,.05);
+            --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PT Sans","Helvetica Neue",Arial,sans-serif;
+        }
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.45}
+        .dashboard{padding:20px;margin:0}
+
+        /* --- Шапка (блок преподавателя и группы) --- */
+        .topbar{background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;border-radius:var(--radius);
+            padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
+        .topbar-title{font-size:18px;font-weight:700;margin:0}
+        .topbar-subtitle{font-size:12px;color:#cdddf0;margin-top:4px}
+        .topbar-right{display:flex;align-items:center}
+        .topbar-right>*{margin-left:14px}
+        .period-chip{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:6px;
+            padding:6px 12px;font-size:12px;color:#fff;white-space:nowrap}
+        .seg{display:inline-flex;border:1px solid rgba(255,255,255,.35);border-radius:6px;overflow:hidden}
+        .seg-btn{padding:6px 11px;font-size:12px;color:#fff;text-decoration:none;white-space:nowrap;cursor:pointer;
+            border-right:1px solid rgba(255,255,255,.25)}
+        .seg-btn:last-child{border-right:none}
+        .seg-btn:hover{background:rgba(255,255,255,.16)}
+        .seg-btn.active{background:rgba(255,255,255,.30);font-weight:700}
+        .tb-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;
+            padding:6px 12px;font-size:12px;text-decoration:none;white-space:nowrap;cursor:pointer}
+        .tb-btn:hover{background:rgba(255,255,255,.25)}
+        .avatar{width:46px;height:46px;border-radius:50%;background:var(--yellow);color:#5a4500;font-weight:700;
+            display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+
+        /* --- KPI-карточки --- */
+        .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:16px 0}
+        .kpi{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--blue);
+            border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;position:relative}
+        .kpi.blue{border-left-color:var(--blue)} .kpi.green{border-left-color:var(--green)}
+        .kpi.orange{border-left-color:var(--orange)} .kpi.red{border-left-color:var(--red)}
+        .kpi-label{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+        .kpi-icon{opacity:.8;cursor:help}
+        .kpi-icon svg{vertical-align:middle}
+        .kpi-value{font-size:30px;font-weight:700;margin:6px 0 2px;letter-spacing:-.5px}
+        .kpi.blue .kpi-value{color:var(--blue)} .kpi.green .kpi-value{color:var(--green)}
+        .kpi.orange .kpi-value{color:var(--orange)} .kpi.red .kpi-value{color:var(--red)}
+        .kpi-sub{font-size:11px;color:var(--muted)}
+
+        /* --- Карточки графиков --- */
+        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+        .card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+        .card-title{margin:0;font-size:14px;font-weight:700}
+        .card-note{font-size:11px;color:var(--muted)}
+        .chart-box{position:relative;height:240px;width:100%}
+
+        /* --- Тепловая карта (строки - студенты, столбцы - темы) --- */
+        .heatmap-wrap{overflow:auto;max-height:440px}
+        table.heatmap{border-collapse:separate;border-spacing:2px;font-size:10px;margin:0 auto}
+        table.heatmap th{font-weight:600;color:var(--muted);padding:3px 6px;font-size:10px}
+        table.heatmap th.corner{text-align:left;color:var(--muted);font-size:10px;font-weight:600}
+        table.heatmap th.rowh{text-align:right;white-space:nowrap;font-weight:normal;color:var(--text);font-size:11px;padding-right:8px}
+        table.heatmap th.colh{font-weight:600;color:var(--text);font-size:10px;padding:3px 6px;text-align:center;white-space:nowrap}
+        table.heatmap td{min-width:40px;height:22px;border-radius:2px;text-align:center;color:#fff;font-size:0}
+
+        /* --- Таблица риска --- */
+        table.risk{width:100%;border-collapse:collapse;font-size:12px}
+        table.risk th,table.risk td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)}
+        table.risk th{font-weight:600;color:var(--muted);background:var(--bg);font-size:11px}
+        table.risk tr{background:#fdf3f1}
+        table.risk td.num{text-align:right;font-variant-numeric:tabular-nums}
+        .theta-bad{color:var(--red);font-weight:600}
+        .theta-warn{color:var(--orange);font-weight:600}
+        .btn-assign{background:var(--blue);color:#fff;border:none;border-radius:5px;padding:4px 12px;font-size:11px;cursor:pointer}
+        a.btn-assign{display:inline-block;text-decoration:none}
+        a.btn-assign:hover{background:var(--navy2)}
+        a.hm-link{color:inherit;text-decoration:none;cursor:pointer}
+        a.hm-link:hover{color:var(--blue);text-decoration:underline}
+        table.risk a.rk-link{color:var(--text);text-decoration:none;cursor:pointer;font-weight:600}
+        table.risk a.rk-link:hover{color:var(--blue);text-decoration:underline}
+        .empty-state{text-align:center;padding:28px;color:var(--muted);font-style:italic}
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="topbar">
+        <div>
+            <h1 class="topbar-title">Дашборд преподавателя — аналитика учебной группы</h1>
+            <div class="topbar-subtitle" id="subtitle">Загрузка…</div>
+        </div>
+        <div class="topbar-right">
+            <div class="seg" id="period-chips">
+                <a class="seg-btn" href="#" data-act="период" data-id="14">2 недели</a>
+                <a class="seg-btn" href="#" data-act="период" data-id="30">месяц</a>
+                <a class="seg-btn" href="#" data-act="период" data-id="90">3 месяца</a>
+            </div>
+            <a class="tb-btn" href="#" data-act="библиотека">Издания библиотеки</a>
+            <a class="tb-btn" href="#" data-act="обновить">↻ Обновить</a>
+            <div class="avatar" id="avatar">––</div>
+        </div>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi blue">
+            <div class="kpi-label">Средняя θ по группе <span class="kpi-icon" title="Средняя подготовленность группы по всем темам (логиты)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6"/><rect x="10.5" y="6" width="3" height="11"/><rect x="15.5" y="13" width="3" height="4"/></svg></span></div>
+            <div class="kpi-value" id="kpi-theta">–</div>
+            <div class="kpi-sub" id="kpi-theta-sub">Целевой порог: –</div>
+        </div>
+        <div class="kpi green">
+            <div class="kpi-label">Освоено тем (в среднем) <span class="kpi-icon" title="Сколько тем в среднем освоено (θ ≥ целевого порога)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9 17.5 20 6.5"/></svg></span></div>
+            <div class="kpi-value" id="kpi-topics">–</div>
+            <div class="kpi-sub">тем с θ ≥ порога</div>
+        </div>
+        <div class="kpi orange">
+            <div class="kpi-label">Завершённых тестов <span class="kpi-icon" title="Всего завершенных попыток теста в группе"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7Z"/><path d="M14 3v4h4M9.5 12h5M9.5 16h5"/></svg></span></div>
+            <div class="kpi-value" id="kpi-tests">0</div>
+            <div class="kpi-sub" id="kpi-tests-sub">за неделю: 0</div>
+        </div>
+        <div class="kpi red">
+            <div class="kpi-label">Студенты из зоны риска <span class="kpi-icon" title="Студенты с низкой θ или давно без активности"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 21.5 20H2.5Z"/><path d="M12 9.5v4.5M12 17h.01"/></svg></span></div>
+            <div class="kpi-value" id="kpi-risk">0</div>
+            <div class="kpi-sub">требуют внимания</div>
+        </div>
+    </div>
+
+    <div class="grid2">
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title">Распределение оценок θ по группе</h2>
+                <span class="card-note" id="hist-note"></span>
+            </div>
+            <div class="chart-box"><canvas id="chart-hist"></canvas></div>
+        </section>
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title">Освоение тем по студентам</h2>
+                <span class="card-note">строка-столбец = балл θ</span>
+            </div>
+            <div class="heatmap-wrap" id="heatmap"><div class="empty-state">Нет данных.</div></div>
+        </section>
+    </div>
+
+    <div class="grid2">
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title">Студенты в зоне риска (низкая θ / простой)</h2>
+                <span class="card-note">Критерий: θ &lt; 0 или &gt; 7 дней без активности</span>
+            </div>
+            <div id="risk-table"><div class="empty-state">Нет данных.</div></div>
+        </section>
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title">Активность группы за 14 дней</h2>
+                <span class="card-note" id="activity-note">число активных студентов</span>
+            </div>
+            <div class="chart-box"><canvas id="chart-activity"></canvas></div>
+        </section>
+    </div>
+</div>
+
+<script id="dashboard-data" type="application/json">{{DASHBOARD_DATA}}</script>
+
+<script>
+const MUTED='#6b7a8a';
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtTheta(v){if(v==null||isNaN(v))return'–';return(v>=0?'+':'')+Number(v).toFixed(2);}
+function initials(name){if(!name)return'––';const p=String(name).trim().split(/\s+/);return((p[0]||'')[0]||'')+((p[1]||'')[0]||'');}
+function monthYear(iso){if(!iso)return'';const m=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];const d=new Date(iso);if(isNaN(d))return'';return m[d.getMonth()]+' '+d.getFullYear();}
+function fmtDay(iso){if(!iso)return'';const d=new Date(iso);if(isNaN(d))return iso;return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0');}
+
+/* Цвет тепловой карты: низкий θ > красный, высокий > зелёный (hue 0..120). */
+function heatColor(v){
+    if(v==null||isNaN(v))return'#eef1f5';
+    const t=Math.max(0,Math.min(1,(v+1.5)/3.5)); // θ от -1.5 до +2
+    const hue=t*120; // 0=красный, 120=зелёный
+    return 'hsl('+hue.toFixed(0)+',62%,'+(42+t*8).toFixed(0)+'%)';
+}
+
+const MOCK_DATA = {
+    Группа:"ИСП-3-22", Преподаватель:"Петров П. П.", ЧислоСтудентов:23, ПорогТета:1.0,
+    Период:{Начало:"2026-05-01",Окончание:"2026-05-24"},
+    KPI:{СредняяТета:0.92,ОсвоеноТемВСреднем:5,ЧислоТемВсего:7,ЗавершённыхТестов:186,ЗавершённыхЗаНеделю:47,ВЗонеРиска:3},
+    РаспределениеТета:(function(){const a=[];const seed=[1.4,0.6,0.1,-0.5,2.1,0.4,0.9,1.2,-0.3,0.7,1.5,0.2,-1.1,0.8,1.0,0.3,1.8,-0.2,0.5,1.1,-0.8,0.6,1.3];
+        const t=["Метаданные","Запросы","Встр.язык","Формы","Регистры","СКД","Расш."];
+        t.forEach(tm=>seed.forEach(v=>a.push({Тема:tm,Тета:+(v+(Math.random()-.5)).toFixed(2)})));return a;})(),
+    ТепловаяКарта:(function(){const a=[];const t=["Метаданные","Запросы","Встр.язык","Формы","Регистры","СКД","Расш."];
+        for(let s=1;s<=23;s++)t.forEach(tm=>a.push({Пользователь:"С"+String(s).padStart(2,'0'),Тема:tm,Тета:+(Math.random()*3-1).toFixed(2)}));return a;})(),
+    СтудентыРиска:[
+        {Студент:"Козлов А. А. (С05)",СредняяТета:-0.42,ДнейПростоя:11,СлабыеТемы:["СКД","Регистры","Расш."]},
+        {Студент:"Никифоров Б. Б. (С11)",СредняяТета:-0.15,ДнейПростоя:8,СлабыеТемы:["СКД","Расш.","Запросы"]},
+        {Студент:"Соколов В. В. (С19)",СредняяТета:0.10,ДнейПростоя:9,СлабыеТемы:["Метаданные","Формы"]}
+    ],
+    АктивныеСтуденты:(function(){const a=[];const base=new Date("2026-05-11");for(let i=0;i<14;i++){const d=new Date(base);d.setDate(d.getDate()+i);
+        a.push({День:d.toISOString().slice(0,10),Количество:Math.floor(Math.random()*16)+5});}return a;})()
+};
+
+let chartHist=null, chartActivity=null;
+
+function initDashboard(data){
+    if(!data){document.querySelector('.dashboard').innerHTML='<div class="empty-state">Нет данных.</div>';return;}
+    renderHeader(data);
+    renderKPI(data);
+    renderHistogram(data);
+    renderHeatmap(data);
+    renderRisk(data);
+    renderActivity(data);
+}
+window.initDashboard=initDashboard;
+
+function renderHeader(data){
+    const N=data.ЧислоСтудентов||0;
+    document.getElementById('subtitle').textContent=
+        (data.Преподаватель||'')+'  •  Группа '+(data.Группа||'')+' ('+N+' '+plural(N,'студент','студента','студентов')+')';
+    document.getElementById('avatar').textContent=initials(data.Преподаватель).toUpperCase()||'––';
+    highlightPeriod(data);
+}
+// Подсветка активного чипа периода по длине окна (дней) из данных.
+function highlightPeriod(data){
+    const p=data.Период||{};let days=30;
+    if(p.Начало&&p.Окончание){const d=Math.round((new Date(p.Окончание)-new Date(p.Начало))/86400000)+1;days=(d<=20)?14:(d<=45)?30:90;}
+    const box=document.getElementById('period-chips');if(!box)return;
+    const btns=box.getElementsByClassName('seg-btn');
+    for(let i=0;i<btns.length;i++){btns[i].className='seg-btn'+(btns[i].getAttribute('data-id')===String(days)?' active':'');}
+}
+function plural(n,a,b,c){const m=n%100;if(m>=11&&m<=14)return c;const k=n%10;if(k===1)return a;if(k>=2&&k<=4)return b;return c;}
+
+function renderKPI(data){
+    const k=data.KPI||{};
+    document.getElementById('kpi-theta').textContent=Number(k.СредняяТета||0).toFixed(2);
+    document.getElementById('kpi-theta-sub').textContent='Целевой порог: '+Number(data.ПорогТета||0).toFixed(1);
+    document.getElementById('kpi-topics').textContent=(k.ОсвоеноТемВСреднем||0)+' / '+(k.ЧислоТемВсего||0);
+    document.getElementById('kpi-tests').textContent=k.ЗавершённыхТестов||0;
+    document.getElementById('kpi-tests-sub').textContent='за неделю: '+(k.ЗавершённыхЗаНеделю||0);
+    document.getElementById('kpi-risk').textContent=(k.ВЗонеРиска||0)+' / '+(data.ЧислоСтудентов||0);
+}
+
+/* Вертикальные линии (среднее θ, целевой порог) поверх гистограммы. */
+const vLinesPlugin={
+    id:'vlines',
+    afterDatasetsDraw(chart,args,opts){
+        if(!opts||!opts.lines)return;
+        const {ctx,chartArea}=chart;const min=opts.min,max=opts.max;
+        opts.lines.forEach(L=>{
+            const x=chartArea.left+(L.value-min)/(max-min)*(chartArea.right-chartArea.left);
+            if(x<chartArea.left||x>chartArea.right)return;
+            ctx.save();ctx.beginPath();ctx.setLineDash(L.dash||[6,4]);ctx.lineWidth=1.5;ctx.strokeStyle=L.color;
+            ctx.moveTo(x,chartArea.top);ctx.lineTo(x,chartArea.bottom);ctx.stroke();
+            ctx.setLineDash([]);ctx.fillStyle=L.color;ctx.font='11px sans-serif';ctx.textAlign='center';
+            ctx.fillText(L.label,x,chartArea.top-2);ctx.restore();
+        });
+    }
+};
+
+// Явный размер canvas: движок HTML-поля 1С не всегда отдает высоту контейнера
+// адаптивному режиму Chart.js, поэтому задаем размеры сами (используется с responsive:false).
+function sizeCanvas(canvas,height){
+    var parent=canvas.parentElement;
+    var w=(parent&&parent.clientWidth)?parent.clientWidth:0;
+    if(!w||w<40){w=(canvas.clientWidth>40?canvas.clientWidth:600);}
+    canvas.width=w;canvas.height=height;
+    canvas.style.width=w+'px';canvas.style.height=height+'px';
+}
+
+function renderHistogram(data){
+    const vals=(data.РаспределениеТета||[]).map(x=>x.Тета).filter(v=>!isNaN(v));
+    const box=document.getElementById('chart-hist');
+    if(vals.length===0){box.parentElement.innerHTML='<div class="empty-state">Нет данных о θ.</div>';return;}
+    const min=Math.floor(Math.min(...vals)*2)/2, max=Math.ceil(Math.max(...vals)*2)/2;
+    const step=0.5, bins=[], labels=[];
+    for(let b=min;b<max-1e-9;b+=step){bins.push(0);labels.push(b.toFixed(1));}
+    vals.forEach(v=>{let i=Math.floor((v-min)/step);if(i<0)i=0;if(i>=bins.length)i=bins.length-1;bins[i]++;});
+    const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+    const target=Number(data.ПорогТета||1);
+    document.getElementById('hist-note').textContent='n = '+vals.length+', тем: '+new Set((data.РаспределениеТета||[]).map(x=>x.Тема)).size;
+
+    if(chartHist)chartHist.destroy();
+    sizeCanvas(box,240);
+    chartHist=new Chart(box,{
+        type:'bar',
+        data:{labels:labels,datasets:[{label:'Студенты-тем',data:bins,backgroundColor:'#2f6fb3cc',borderColor:'#1f4e79',borderWidth:1,categoryPercentage:1,barPercentage:.96}]},
+        options:{responsive:false,maintainAspectRatio:false,devicePixelRatio:1,
+            plugins:{legend:{display:false},
+                vlines:{min:min,max:max,lines:[
+                    {value:mean,color:'#e08a2e',dash:[6,4],label:'среднее θ='+mean.toFixed(2)},
+                    {value:target,color:'#444',dash:[2,3],label:'порог '+target.toFixed(1)}
+                ]}},
+            scales:{x:{title:{display:true,text:'θ (логиты)'},grid:{display:false}},
+                y:{beginAtZero:true,title:{display:true,text:'Число'}}}},
+        plugins:[vLinesPlugin]
+    });
+}
+
+function renderHeatmap(data){
+    const pts=data.ТепловаяКарта||[];const wrap=document.getElementById('heatmap');
+    if(pts.length===0){wrap.innerHTML='<div class="empty-state">Нет данных.</div>';return;}
+    const students=[...new Set(pts.map(p=>p.Пользователь))];
+    const topics=[...new Set(pts.map(p=>p.Тема))];
+    const sid={},tid={};pts.forEach(p=>{sid[p.Пользователь]=p.ПользовательИД||'';tid[p.Тема]=p.ТемаИД||'';});
+    const map={};pts.forEach(p=>{map[p.Пользователь+'|'+p.Тема]=p.Тета;});
+    // Строки - студенты (имена читаются горизонтально), столбцы - темы.
+    const h=['<table class="heatmap"><thead><tr><th class="corner">Студент \\ Тема</th>'];
+    topics.forEach(t=>h.push('<th class="colh"><a class="hm-link" href="#" data-act="тема" data-id="'+esc(tid[t]||'')+'" title="'+esc(t)+'">'+esc(shortTopic(t))+'</a></th>'));
+    h.push('</tr></thead><tbody>');
+    students.forEach(s=>{
+        h.push('<tr><th class="rowh"><a class="hm-link" href="#" data-act="студент" data-id="'+esc(sid[s]||'')+'" title="Открыть дашборд: '+esc(s)+'">'+esc(s)+'</a></th>');
+        topics.forEach(t=>{const v=map[s+'|'+t];
+            h.push('<td style="background:'+heatColor(v)+'" title="'+esc(s)+' / '+esc(t)+': '+(v==null||isNaN(v)?'–':Number(v).toFixed(2))+'"></td>');});
+        h.push('</tr>');
+    });
+    h.push('</tbody></table>');
+    wrap.innerHTML=h.join('');
+}
+function shortTopic(t){
+    const m={'Объекты метаданных':'Метаданные','Язык запросов':'Запросы','Встроенный язык':'Встр. язык',
+        'Управляемые формы и командный интерфейс':'Формы','Расширения конфигураций':'Расширения',
+        'Механизмы обмена данными':'Обмен данными'};
+    if(m[t])return m[t];
+    const p=String(t).split(/\s+/);return p[0]?p[0].slice(0,12):t;
+}
+function shortName(s){const m=String(s).match(/\(([^)]+)\)/);if(m)return m[1];const p=String(s).split(/\s+/);return p[0]?p[0].slice(0,6):s;}
+
+function renderRisk(data){
+    const rows=data.СтудентыРиска||[];const box=document.getElementById('risk-table');
+    if(rows.length===0){box.innerHTML='<div class="empty-state">Студентов в зоне риска нет.</div>';return;}
+    const h=['<table class="risk"><thead><tr><th>№</th><th>Студент</th><th>Средняя θ</th><th>Дней простоя</th><th>Слабые темы</th><th>Действие</th></tr></thead><tbody>'];
+    rows.forEach((r,i)=>{
+        const cls=r.СредняяТета<0?'theta-bad':'theta-warn';
+        const idle=r.ДнейПростоя>=999?'–':r.ДнейПростоя;
+        h.push('<tr><td class="num">'+(i+1)+'</td>'+
+            '<td><a class="rk-link" href="#" data-act="студент" data-id="'+esc(r.ПользовательИД||'')+'">'+esc(r.Студент)+'</a></td>'+
+            '<td class="num '+cls+'">'+fmtTheta(r.СредняяТета)+'</td>'+
+            '<td class="num">'+idle+'</td>'+
+            '<td>'+esc((r.СлабыеТемы||[]).join(', '))+'</td>'+
+            '<td><a class="btn-assign" href="#" data-act="студент" data-id="'+esc(r.ПользовательИД||'')+'">Открыть</a></td></tr>');
+    });
+    h.push('</tbody></table>');
+    box.innerHTML=h.join('');
+}
+
+function renderActivity(data){
+    const pts=data.АктивныеСтуденты||[];const box=document.getElementById('chart-activity');
+    if(pts.length===0){box.parentElement.innerHTML='<div class="empty-state">Нет активности.</div>';return;}
+    document.getElementById('activity-note').textContent='всего в группе: '+(data.ЧислоСтудентов||0);
+    const labels=pts.map(p=>fmtDay(p.День));
+    const vals=pts.map(p=>p.Количество);
+    const colors=vals.map(v=>v>=12?'#4f9d69':v>=6?'#e08a2e':'#c8553d');
+    if(chartActivity)chartActivity.destroy();
+    sizeCanvas(box,240);
+    chartActivity=new Chart(box,{
+        type:'bar',
+        data:{labels:labels,datasets:[{label:'Активных студентов',data:vals,backgroundColor:colors}]},
+        options:{responsive:false,maintainAspectRatio:false,devicePixelRatio:1,
+            plugins:{legend:{display:false}},
+            scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{precision:0}}}}
+    });
+}
+
+(function start(){
+    const raw=document.getElementById('dashboard-data').textContent.trim();
+    let data;
+    try{data=(raw.indexOf('{{')===0||raw==='')?MOCK_DATA:JSON.parse(raw);}
+    catch(e){console.error('JSON испорчен:',e);data=MOCK_DATA;}
+    initDashboard(data);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Администрирование встроенной библиотеки</title>
+<style>
+:root{
+  --bg:#eef1f5;--surface:#ffffff;--border:#dfe4ea;--text:#26323d;--muted:#6b7a8a;
+  --navy:#1f4e79;--navy2:#2b5d8a;--blue:#2f6fb3;--green:#4f9d69;--orange:#e08a2e;
+  --red:#c8553d;--yellow:#f2b134;
+  --radius:8px;--shadow:0 1px 3px rgba(31,46,64,.10),0 1px 2px rgba(31,46,64,.05);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PT Sans","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.45}
+.dashboard{padding:20px}
+.topbar{background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;border-radius:var(--radius);
+  padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
+.topbar-title{font-size:18px;font-weight:700;margin:0}
+.topbar-subtitle{font-size:12px;color:#cdddf0;margin-top:4px}
+.topbar-actions{display:flex;align-items:center}
+.topbar-actions>*{margin-left:10px}
+.tb-btn{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);
+  color:#fff;border-radius:6px;padding:7px 13px;font-size:12px;white-space:nowrap}
+.tb-btn.primary{background:var(--yellow);color:#5a4500;font-weight:700;border-color:var(--yellow)}
+.avatar{width:46px;height:46px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;
+  display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.card-title{margin:0;font-size:14px;font-weight:700}
+.card-note{font-size:11px;color:var(--muted)}
+
+.toolbar{display:flex;gap:10px;align-items:center;margin:16px 0}
+.search{flex:1;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:9px 14px;color:var(--muted);font-size:13px}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:12px;
+  color:var(--text);white-space:nowrap;box-shadow:var(--shadow)}
+.chip.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+
+/* Таблица материалов */
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{text-align:left;background:#f1f5f9;color:var(--navy);font-size:11px;text-transform:uppercase;
+  letter-spacing:.3px;padding:8px 10px;border-bottom:2px solid var(--border)}
+tbody td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+tbody tr.sel{background:#eaf3fb;box-shadow:inset 3px 0 0 var(--blue)}
+tbody tr:hover{background:#f5f9fe}
+.kind{display:inline-block;font-size:10.5px;color:#fff;background:var(--blue);border-radius:12px;padding:2px 9px;white-space:nowrap}
+.kind.spravochnik{background:var(--green)}.kind.metod{background:var(--orange)}.kind.norm{background:#8a7bb8}
+.bib{font-weight:600}
+.muted{color:var(--muted)}
+.filechip{font-size:11px;color:var(--blue)}
+
+/* Форма редактирования */
+.form .row{margin-bottom:9px}
+.form label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.inp{width:100%;border:1px solid #c3ccd6;border-radius:6px;padding:7px 9px;font-size:12px;background:#fff}
+.inp.area{min-height:42px;line-height:1.4}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.filebox{display:flex;justify-content:space-between;align-items:center;border:1px dashed #c3ccd6;border-radius:6px;
+  padding:7px 10px;font-size:12px;background:#f8fafc}
+.minihdr{font-size:11px;color:var(--muted);margin:8px 0 4px}
+.minitbl{width:100%;border:1px solid var(--border);border-radius:6px;overflow:hidden;font-size:11.5px}
+.minitbl .mh{display:flex;background:#f1f5f9;font-weight:700;color:var(--navy);padding:5px 9px}
+.minitbl .mr{display:flex;padding:5px 9px;border-top:1px solid var(--border)}
+.minitbl .mh span:first-child,.minitbl .mr span:first-child{flex:1}
+.btns{display:flex;gap:10px;margin-top:12px}
+.btn{border-radius:6px;padding:9px 14px;font-size:12.5px;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--blue);color:#fff;border:1px solid var(--blue)}
+.btn-ghost{background:#fff;color:var(--text);border:1px solid #c3ccd6}
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Администрирование встроенной библиотеки учебных материалов</div>
+      <div class="topbar-subtitle">Преподаватель Петров П. П.&nbsp;•&nbsp;курс «Разработка прикладных решений на 1С 8.3»&nbsp;•&nbsp;41 материал</div>
+    </div>
+    <div class="topbar-actions">
+      <span class="tb-btn primary">+ Добавить материал</span>
+      <span class="tb-btn">Загрузить файл</span>
+      <div class="avatar">ПП</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7a8a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Поиск по библиографическому описанию, автору, ключевым словам…
+    </div>
+    <span class="chip active">Вид: все</span>
+    <span class="chip">Учебник</span>
+    <span class="chip">Справочник</span>
+    <span class="chip">Метод. пособие</span>
+  </div>
+
+  <div class="grid">
+    <!-- Таблица материалов -->
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Материалы библиотеки</h2><span class="card-note">справочник «МатериалыБиблиотеки»</span></div>
+      <table>
+        <thead><tr><th>Вид</th><th>Библиографическое описание (ГОСТ Р 7.0.100)</th><th>Темы</th><th>Файл</th></tr></thead>
+        <tbody>
+          <tr class="sel"><td><span class="kind">Учебник</span></td><td class="bib">Радченко М. Г., Хрусталёва Е. Ю. 1С:Предприятие 8.3. Версия для обучения… 2023</td><td>3</td><td class="filechip">PDF · 480с</td></tr>
+          <tr><td><span class="kind spravochnik">Справочник</span></td><td class="bib">Хрусталёва Е. Ю. Язык запросов «1С:Предприятия 8». — М., 2022</td><td>2</td><td class="filechip">PDF · 320с</td></tr>
+          <tr><td><span class="kind">Учебник</span></td><td class="bib">Гилёв А. С. 1С:Предприятие 8.3 для начинающих разработчиков. 2021</td><td>3</td><td class="filechip">PDF · 280с</td></tr>
+          <tr><td><span class="kind metod">Метод.</span></td><td class="bib">Радченко, Хрусталёва. Практическое пособие. Используем 1С:EDT. 2023</td><td>4</td><td class="filechip">PDF · 920с</td></tr>
+          <tr><td><span class="kind spravochnik">Справочник</span></td><td class="bib">Шамхалов Ф. И. Профессиональная разработка в 1С:Предприятии 8. Т. 1</td><td>2</td><td class="filechip">PDF · 660с</td></tr>
+          <tr><td><span class="kind metod">Метод.</span></td><td class="bib">Хрусталёва Е. Ю. Разработка отчётов на СКД 8.3. — М., 2022</td><td>1</td><td class="filechip">PDF · 240с</td></tr>
+          <tr><td><span class="kind norm">Норм.</span></td><td class="bib">ГОСТ Р 7.0.100–2018. Библиографическое описание</td><td>—</td><td class="filechip">PDF · 70с</td></tr>
+          <tr><td><span class="kind metod">Метод.</span></td><td class="bib">Методические указания по курсу «КИС на 1С». — ПГНИУ, 2025</td><td>5</td><td class="filechip">PDF · 84с</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Форма редактирования -->
+    <div class="card form">
+      <div class="card-head"><h2 class="card-title">Карточка материала (изменение)</h2></div>
+      <div class="row"><label>Вид материала</label><div class="inp">Учебник ▾</div></div>
+      <div class="row"><label>Библиографическое описание (ГОСТ Р 7.0.100–2018)</label>
+        <div class="inp area">Радченко М. Г., Хрусталёва Е. Ю. 1С:Предприятие 8.3. Версия для обучения программированию. — М.: 1С-Паблишинг, 2023. — 480 с.</div></div>
+      <div class="two">
+        <div class="row"><label>Автор</label><div class="inp">Радченко М. Г.</div></div>
+        <div class="row"><label>Год</label><div class="inp">2023</div></div>
+      </div>
+      <div class="two">
+        <div class="row"><label>Издательство</label><div class="inp">ООО «1С-Паблишинг»</div></div>
+        <div class="row"><label>ISBN</label><div class="inp">978-5-9677-3001-2</div></div>
+      </div>
+      <div class="row"><label>Ключевые слова</label><div class="inp">новичкам, объекты, встроенный язык</div></div>
+      <div class="row"><label>Файл книги</label>
+        <div class="filebox"><span>1c_intro.pdf&nbsp;&nbsp;<span class="muted">(18 МБ, 480 с.)</span></span><span class="filechip">Заменить</span></div></div>
+      <div class="minihdr">Привязки к темам (табличная часть):</div>
+      <div class="minitbl">
+        <div class="mh"><span>Тема</span><span>Приоритет</span></div>
+        <div class="mr"><span>Объекты метаданных</span><span>1</span></div>
+        <div class="mr"><span>Встроенный язык</span><span>2</span></div>
+      </div>
+      <div class="btns">
+        <div class="btn btn-primary">Записать и закрыть</div>
+        <div class="btn btn-ghost">Записать</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

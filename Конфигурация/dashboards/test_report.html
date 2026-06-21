@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчёт по прохождению теста</title>
+    <!-- Standalone-превью: Chart.js с CDN (в 1С отгружается инлайн+ES2017, см. Template.txt). -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root{--color-bg:#f5f7fa;--color-surface:#ffffff;--color-border:#d8dee9;--color-text:#2e3440;--color-text-muted:#5c6b7a;--color-accent:#3b6dd1;--color-accent-soft:#dde6f6;--color-success:#4f9d69;--color-warning:#e3a857;--color-danger:#c8553d;--radius:6px;--shadow-card:0 1px 3px rgba(46,52,64,.08),0 1px 2px rgba(46,52,64,.04);--font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PT Sans","Helvetica Neue",Arial,sans-serif}
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-family);font-size:13px;line-height:1.4}
+        .dashboard{padding:24px;max-width:1400px;margin:0 auto}
+        .dashboard-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--color-border)}
+        .dashboard-title{font-size:24px;font-weight:600;margin:0}
+        .dashboard-subtitle{color:var(--color-text-muted);font-size:12px;margin-top:4px}
+        .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+        .summary-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow-card);padding:16px;text-align:center}
+        .summary-value{font-size:32px;font-weight:600;color:var(--color-accent);display:block;margin-bottom:4px}
+        .summary-label{font-size:12px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px}
+        .cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+        .card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow-card);padding:16px}
+        .card-wide{grid-column:1/-1}
+        .card-title{margin:0 0 16px 0;font-size:16px;font-weight:600}
+        .chart-container{position:relative;height:300px;width:100%}
+        .chart-container-tall{height:380px}
+        .status-pill{display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600;margin-left:8px}
+        .status-pill.completed{background:rgba(79,157,105,.15);color:var(--color-success)}
+        .status-pill.active{background:rgba(59,109,209,.15);color:var(--color-accent)}
+        .status-pill.interrupted{background:rgba(200,85,61,.15);color:var(--color-danger)}
+        .recommendations{list-style:none;padding:0;margin:0}
+        .recommendations li{padding:8px 16px;margin-bottom:4px;background:var(--color-accent-soft);border-left:3px solid var(--color-accent);border-radius:0 var(--radius) var(--radius) 0}
+        .empty-state{text-align:center;padding:32px;color:var(--color-text-muted);font-style:italic}
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <header class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">Отчёт по прохождению теста <span id="status-pill" class="status-pill"></span></h1>
+            <div class="dashboard-subtitle" id="meta-subtitle">Загрузка…</div>
+        </div>
+    </header>
+
+    <!-- Итоговые показатели -->
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="summary-value" id="summary-theta">–</span>
+            <span class="summary-label">Итоговая θ</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-value" id="summary-se">–</span>
+            <span class="summary-label">Стандартная ошибка SE</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-value" id="summary-count">–</span>
+            <span class="summary-label">Заданий в сессии</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-value" id="summary-correct">–</span>
+            <span class="summary-label">Верных ответов</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-value" id="summary-duration">–</span>
+            <span class="summary-label">Длительность</span>
+        </div>
+    </div>
+
+    <div class="cards-grid">
+        <!-- Кривая сходимости -->
+        <section class="card card-wide">
+            <h2 class="card-title">Кривая сходимости θ</h2>
+            <div class="chart-container chart-container-tall">
+                <canvas id="chart-convergence"></canvas>
+            </div>
+        </section>
+
+        <!-- Распределение по верности -->
+        <section class="card">
+            <h2 class="card-title">Распределение ответов</h2>
+            <div class="chart-container">
+                <canvas id="chart-pie"></canvas>
+            </div>
+        </section>
+
+        <!-- Распределение по трудностям -->
+        <section class="card">
+            <h2 class="card-title">Ответы по уровням трудности</h2>
+            <div class="chart-container">
+                <canvas id="chart-difficulty"></canvas>
+            </div>
+        </section>
+
+        <!-- Рекомендации -->
+        <section class="card card-wide">
+            <h2 class="card-title">Рекомендации дальнейших действий</h2>
+            <ul class="recommendations" id="recommendations"></ul>
+        </section>
+    </div>
+</div>
+
+<script id="dashboard-data" type="application/json">{{DASHBOARD_DATA}}</script>
+
+<script>
+const PALETTE = ['#3b6dd1','#6798c0','#4f9d69','#e3a857','#b86db8','#c8553d'];
+function paletteColor(i){return PALETTE[i%PALETTE.length];}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function formatDate(iso){if(!iso)return'';const d=new Date(iso);if(isNaN(d.getTime()))return iso;return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function formatTheta(v){if(v==null||isNaN(v))return'–';return(v>=0?'+':'')+Number(v).toFixed(2);}
+function formatDuration(start, end){if(!start||!end)return'–';const ms=new Date(end).getTime()-new Date(start).getTime();if(isNaN(ms)||ms<=0)return'–';const min=Math.floor(ms/60000);const sec=Math.floor((ms%60000)/1000);return min+' мин '+sec+' сек';}
+
+const MOCK_DATA = {
+    Тема: "Объекты метаданных",
+    Обучающийся: "Иванов Иван Иванович",
+    ДатаНачала: "2026-05-15T10:30:00",
+    ДатаОкончания: "2026-05-15T10:48:23",
+    ИтоговаяТета: 1.42,
+    ИтоговаяSE: 0.28,
+    ЧислоЗаданий: 14,
+    СтатусСессии: "Завершена",
+    КриваяСходимости: [
+        { Шаг: 1,  Тета:  0.40, SE: 1.20, Верно: true,  ТрудностьB:  0.0 },
+        { Шаг: 2,  Тета:  0.85, SE: 0.95, Верно: true,  ТрудностьB:  0.5 },
+        { Шаг: 3,  Тета:  0.50, SE: 0.80, Верно: false, ТрудностьB:  1.2 },
+        { Шаг: 4,  Тета:  0.85, SE: 0.70, Верно: true,  ТрудностьB:  0.6 },
+        { Шаг: 5,  Тета:  1.15, SE: 0.60, Верно: true,  ТрудностьB:  1.0 },
+        { Шаг: 6,  Тета:  0.95, SE: 0.55, Верно: false, ТрудностьB:  1.6 },
+        { Шаг: 7,  Тета:  1.25, SE: 0.50, Верно: true,  ТрудностьB:  1.2 },
+        { Шаг: 8,  Тета:  1.45, SE: 0.46, Верно: true,  ТрудностьB:  1.4 },
+        { Шаг: 9,  Тета:  1.30, SE: 0.42, Верно: false, ТрудностьB:  1.8 },
+        { Шаг: 10, Тета:  1.45, SE: 0.39, Верно: true,  ТрудностьB:  1.4 },
+        { Шаг: 11, Тета:  1.55, SE: 0.35, Верно: true,  ТрудностьB:  1.6 },
+        { Шаг: 12, Тета:  1.40, SE: 0.32, Верно: false, ТрудностьB:  1.9 },
+        { Шаг: 13, Тета:  1.48, SE: 0.30, Верно: true,  ТрудностьB:  1.5 },
+        { Шаг: 14, Тета:  1.42, SE: 0.28, Верно: true,  ТрудностьB:  1.4 }
+    ]
+};
+
+function initDashboard(data) {
+    if (!data) {
+        document.querySelector('.dashboard').innerHTML =
+            '<div class="empty-state">Нет данных о сессии.</div>';
+        return;
+    }
+    renderHeader(data);
+    renderSummary(data);
+    renderConvergence(data);
+    renderDistribution(data);
+    renderDifficulty(data);
+    renderRecommendations(data);
+}
+window.initDashboard = initDashboard;
+
+/* ------- Заголовок и статус -------------------------------------------- */
+function renderHeader(data) {
+    document.getElementById('meta-subtitle').textContent =
+        (data.Обучающийся || '') + ' • тема: ' + (data.Тема || '–') +
+        ' • начало: ' + formatDate(data.ДатаНачала);
+
+    const pill = document.getElementById('status-pill');
+    const status = (data.СтатусСессии || '').toLowerCase();
+    if (status === 'завершена') { pill.classList.add('completed'); pill.textContent = 'Завершена'; }
+    else if (status === 'активна') { pill.classList.add('active'); pill.textContent = 'Активна'; }
+    else if (status === 'прервана') { pill.classList.add('interrupted'); pill.textContent = 'Прервана'; }
+    else pill.textContent = data.СтатусСессии || '';
+}
+
+/* ------- Сводные показатели -------------------------------------------- */
+function renderSummary(data) {
+    document.getElementById('summary-theta').textContent = formatTheta(data.ИтоговаяТета);
+    document.getElementById('summary-se').textContent =
+        data.ИтоговаяSE != null && !isNaN(data.ИтоговаяSE) ? Number(data.ИтоговаяSE).toFixed(2) : '–';
+    document.getElementById('summary-count').textContent = data.ЧислоЗаданий || 0;
+
+    const correct = (data.КриваяСходимости || []).filter(x => x.Верно).length;
+    document.getElementById('summary-correct').textContent =
+        correct + ' / ' + (data.ЧислоЗаданий || 0);
+
+    document.getElementById('summary-duration').textContent =
+        formatDuration(data.ДатаНачала, data.ДатаОкончания);
+}
+
+// Явный размер canvas: движок HTML-поля 1С не всегда отдает высоту контейнера
+// адаптивному режиму Chart.js, поэтому задаем размеры сами (используется с responsive:false).
+function sizeCanvas(canvas, height) {
+    var parent = canvas.parentElement;
+    var w = (parent && parent.clientWidth) ? parent.clientWidth : 0;
+    if (!w || w < 40) { w = (canvas.clientWidth > 40 ? canvas.clientWidth : 600); }
+    canvas.width = w; canvas.height = height;
+    canvas.style.width = w + 'px'; canvas.style.height = height + 'px';
+}
+
+/* ------- Кривая сходимости θ ------------------------------------------- */
+function renderConvergence(data) {
+    const steps = data.КриваяСходимости || [];
+    if (steps.length === 0) {
+        document.getElementById('chart-convergence').parentElement.innerHTML =
+            '<div class="empty-state">Нет данных о шагах сессии.</div>';
+        return;
+    }
+
+    const labels = steps.map(s => 'Ш' + s.Шаг);
+    const thetas = steps.map(s => s.Тета);
+    const seUpper = steps.map(s => s.Тета + (s.SE || 0));
+    const seLower = steps.map(s => s.Тета - (s.SE || 0));
+
+    // Точки правильных и неправильных ответов
+    const correctPoints = steps.map(s => s.Верно ? s.Тета : null);
+    const wrongPoints = steps.map(s => !s.Верно ? s.Тета : null);
+
+    sizeCanvas(document.getElementById('chart-convergence'), 380);
+    new Chart(document.getElementById('chart-convergence'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Верхняя граница (θ + SE)',
+                    data: seUpper,
+                    borderColor: PALETTE[1] + '66',
+                    borderWidth: 1,
+                    borderDash: [4, 4],
+                    pointRadius: 0,
+                    fill: '+1',
+                    backgroundColor: PALETTE[1] + '15'
+                },
+                {
+                    label: 'Нижняя граница (θ − SE)',
+                    data: seLower,
+                    borderColor: PALETTE[1] + '66',
+                    borderWidth: 1,
+                    borderDash: [4, 4],
+                    pointRadius: 0
+                },
+                {
+                    label: 'θ',
+                    data: thetas,
+                    borderColor: PALETTE[0],
+                    backgroundColor: PALETTE[0],
+                    borderWidth: 2.5,
+                    tension: 0.2,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Верный ответ',
+                    type: 'scatter',
+                    data: correctPoints.map((y, i) => y !== null ? { x: labels[i], y: y } : null).filter(x => x),
+                    pointStyle: 'circle',
+                    pointRadius: 7,
+                    pointBackgroundColor: PALETTE[2],
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5
+                },
+                {
+                    label: 'Неверный ответ',
+                    type: 'scatter',
+                    data: wrongPoints.map((y, i) => y !== null ? { x: labels[i], y: y } : null).filter(x => x),
+                    pointStyle: 'crossRot',
+                    pointRadius: 8,
+                    pointBackgroundColor: PALETTE[5],
+                    pointBorderColor: PALETTE[5],
+                    pointBorderWidth: 2.5
+                }
+            ]
+        },
+        options: {
+            responsive: false, maintainAspectRatio: false, devicePixelRatio: 1,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+            scales: {
+                x: { title: { display: true, text: 'Шаг сессии' } },
+                y: { title: { display: true, text: 'θ (логит)' } }
+            }
+        }
+    });
+}
+
+/* ------- Распределение верных/неверных --------------------------------- */
+function renderDistribution(data) {
+    const steps = data.КриваяСходимости || [];
+    const correct = steps.filter(s => s.Верно).length;
+    const wrong = steps.length - correct;
+
+    if (steps.length === 0) {
+        document.getElementById('chart-pie').parentElement.innerHTML =
+            '<div class="empty-state">Нет данных.</div>';
+        return;
+    }
+
+    sizeCanvas(document.getElementById('chart-pie'), 300);
+    new Chart(document.getElementById('chart-pie'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Верно', 'Неверно'],
+            datasets: [{
+                data: [correct, wrong],
+                backgroundColor: [PALETTE[2], PALETTE[5]],
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: false, maintainAspectRatio: false, devicePixelRatio: 1,
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+}
+
+/* ------- Распределение по трудности b ---------------------------------- */
+function renderDifficulty(data) {
+    const steps = data.КриваяСходимости || [];
+    if (steps.length === 0) {
+        document.getElementById('chart-difficulty').parentElement.innerHTML =
+            '<div class="empty-state">Нет данных.</div>';
+        return;
+    }
+
+    // Группируем по бакетам трудности: (-∞, -1], (-1, 0], (0, 1], (1, 2], (2, +∞)
+    const buckets = [
+        { label: 'b ≤ -1',       min: -Infinity, max: -1 },
+        { label: '-1 < b ≤ 0',   min: -1,        max:  0 },
+        { label: '0 < b ≤ 1',    min:  0,        max:  1 },
+        { label: '1 < b ≤ 2',    min:  1,        max:  2 },
+        { label: 'b > 2',        min:  2,        max:  Infinity }
+    ];
+
+    const correctCounts = buckets.map(() => 0);
+    const wrongCounts = buckets.map(() => 0);
+
+    steps.forEach(s => {
+        const b = s.ТрудностьB != null ? s.ТрудностьB : 0;
+        const i = buckets.findIndex(bb => b > bb.min && b <= bb.max);
+        if (i >= 0) {
+            if (s.Верно) correctCounts[i]++; else wrongCounts[i]++;
+        }
+    });
+
+    sizeCanvas(document.getElementById('chart-difficulty'), 300);
+    new Chart(document.getElementById('chart-difficulty'), {
+        type: 'bar',
+        data: {
+            labels: buckets.map(b => b.label),
+            datasets: [
+                { label: 'Верно',   data: correctCounts, backgroundColor: PALETTE[2] },
+                { label: 'Неверно', data: wrongCounts,   backgroundColor: PALETTE[5] }
+            ]
+        },
+        options: {
+            responsive: false, maintainAspectRatio: false, devicePixelRatio: 1,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, beginAtZero: true,
+                     ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+/* ------- Рекомендации -------------------------------------------------- */
+function renderRecommendations(data) {
+    const list = document.getElementById('recommendations');
+    const recs = [];
+
+    const theta = data.ИтоговаяТета;
+    const se = data.ИтоговаяSE;
+    const ПОРОГ = 0.5;
+
+    if (theta != null && !isNaN(theta)) {
+        if (theta >= ПОРОГ) {
+            recs.push('Тема «' + (data.Тема || 'текущая') + '» успешно пройдена (θ = ' +
+                formatTheta(theta) + '). Рекомендуется перейти к следующей теме траектории.');
+        } else if (theta >= 0) {
+            recs.push('Подготовленность по теме «' + (data.Тема || 'текущей') +
+                '» близка к пороговой. Рекомендуется поработать с дополнительными материалами библиотеки.');
+        } else {
+            recs.push('Подготовленность по теме «' + (data.Тема || 'текущей') +
+                '» ниже базового уровня. Рекомендуется повторить материалы и пройти сессию повторно.');
+        }
+    }
+
+    if (se != null && se > 0.5) {
+        recs.push('Стандартная ошибка SE = ' + se.toFixed(2) +
+            ' — относительно высокая. Стоит пройти ещё одну сессию для уточнения оценки θ.');
+    }
+
+    const steps = data.КриваяСходимости || [];
+    const correct = steps.filter(s => s.Верно).length;
+    if (steps.length > 0) {
+        const pct = correct / steps.length;
+        if (pct < 0.4) {
+            recs.push('Доля верных ответов составила ' + Math.round(pct * 100) +
+                '%. Возможно, банк заданий по теме оказался слишком сложным; обратитесь к преподавателю.');
+        } else if (pct > 0.9) {
+            recs.push('Очень высокая доля верных ответов (' + Math.round(pct * 100) +
+                '%). На следующей сессии будет предложен материал повышенной сложности.');
+        }
+    }
+
+    if (recs.length === 0) {
+        recs.push('Сессия завершена корректно. Рекомендуется проверить динамику θ в общем дашборде.');
+    }
+
+    list.innerHTML = recs.map(t => '<li>' + escapeHtml(t) + '</li>').join('');
+}
+
+/* ----- Старт ----------------------------------------------------------- */
+(function start() {
+    const raw = document.getElementById('dashboard-data').textContent.trim();
+    let data;
+    try {
+        if (raw.indexOf('{{') === 0 || raw === '') data = MOCK_DATA;
+        else data = JSON.parse(raw);
+    } catch (e) {
+        console.error('Не удалось разобрать JSON:', e);
+        data = MOCK_DATA;
+    }
+    initDashboard(data);
+})();
+</script>
+
+</body>
+</html>

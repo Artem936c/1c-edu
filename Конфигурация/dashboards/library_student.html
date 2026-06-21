@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Встроенная библиотека — обучающийся</title>
+<style>
+:root{
+  --bg:#eef1f5;--surface:#ffffff;--border:#dfe4ea;--text:#26323d;--muted:#6b7a8a;
+  --navy:#1f4e79;--navy2:#2b5d8a;--blue:#2f6fb3;--green:#4f9d69;--orange:#e08a2e;
+  --red:#c8553d;--yellow:#f2b134;
+  --radius:8px;--shadow:0 1px 3px rgba(31,46,64,.10),0 1px 2px rgba(31,46,64,.05);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PT Sans","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.45}
+.dashboard{padding:20px}
+.topbar{background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;border-radius:var(--radius);
+  padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
+.topbar-title{font-size:18px;font-weight:700;margin:0}
+.topbar-subtitle{font-size:12px;color:#cdddf0;margin-top:4px}
+.topbar-actions{display:flex;align-items:center}
+.topbar-actions>*{margin-left:10px}
+.tb-btn{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);
+  color:#fff;border-radius:6px;padding:6px 12px;font-size:12px;white-space:nowrap}
+.tb-btn.active{background:#fff;color:var(--navy);font-weight:700;border-color:#fff}
+.avatar{width:46px;height:46px;border-radius:50%;background:var(--yellow);color:#5a4500;font-weight:700;
+  display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.card-title{margin:0;font-size:14px;font-weight:700}
+.card-note{font-size:11px;color:var(--muted)}
+
+/* Тулбар поиска и фильтров */
+.toolbar{display:flex;gap:10px;align-items:center;margin:16px 0}
+.search{flex:1;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:9px 14px;color:var(--muted);font-size:13px}
+.search svg{flex:none}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:12px;
+  color:var(--text);white-space:nowrap;box-shadow:var(--shadow)}
+.chip.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+
+/* Список материалов */
+.mat-list{display:flex;flex-direction:column}
+.mat-group{margin-bottom:14px}
+.mat-group-title{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;
+  letter-spacing:.4px;margin-bottom:6px}
+.mat-row{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);
+  border-radius:6px;padding:10px 12px;margin-bottom:7px;cursor:pointer;background:#fff}
+.mat-row:hover{border-color:var(--blue);background:#f5f9fe}
+.mat-row.sel{border-color:var(--blue);background:#eaf3fb;box-shadow:inset 3px 0 0 var(--blue)}
+.mat-row>div:first-child{flex:1;min-width:0;padding-right:10px}
+.mat-name{font-size:12.5px;font-weight:700;overflow-wrap:anywhere}
+.mat-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.mat-kind{flex:none;font-size:10.5px;color:#fff;background:var(--blue);border-radius:12px;padding:3px 10px;white-space:nowrap}
+.mat-kind.spravochnik{background:var(--green)}
+.mat-kind.metod{background:var(--orange)}
+.mat-kind.norm{background:#8a7bb8}
+.mat-kind.video{background:var(--red)}
+
+/* Панель просмотра выбранного материала */
+.viewer{display:flex;flex-direction:column}
+.cover{height:120px;border-radius:6px;background:linear-gradient(135deg,#1f4e79,#2f6fb3);color:#fff;
+  display:flex;flex-direction:column;justify-content:center;padding:14px 16px;margin-bottom:12px}
+.cover b{font-size:15px}
+.cover span{font-size:12px;color:#cdddf0;margin-top:4px}
+.gost{font-size:12px;color:var(--text);background:#f6f8fb;border:1px solid var(--border);border-radius:6px;
+  padding:9px 11px;margin-bottom:12px;line-height:1.5}
+.fld{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:1px dashed var(--border)}
+.fld .l{color:var(--muted)}
+.fld .v{font-weight:600;text-align:right}
+.tags{margin:10px 0 4px}
+.tag{display:inline-block;background:#eef4fa;color:var(--blue);border:1px solid #d4e4f2;border-radius:12px;
+  padding:3px 10px;font-size:11px;margin:0 4px 4px 0}
+.btns{display:flex;gap:10px;margin-top:14px}
+.btn{flex:1;text-align:center;border-radius:6px;padding:10px;font-size:12.5px;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--blue);color:#fff;border:1px solid var(--blue)}
+.btn-ghost{background:#fff;color:var(--text);border:1px solid #c3ccd6}
+.footer{margin-top:14px;font-size:11px;color:var(--muted);text-align:right}
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Встроенная библиотека — учебные материалы по «1С:Предприятие 8.3»</div>
+      <div class="topbar-subtitle">Иванов А. С.&nbsp;•&nbsp;группа ИСП-3-22&nbsp;•&nbsp;курс «Разработка прикладных решений на 1С 8.3»</div>
+    </div>
+    <div class="topbar-actions">
+      <span class="tb-btn active">Все материалы</span>
+      <span class="tb-btn">Избранное</span>
+      <span class="tb-btn">История</span>
+      <div class="avatar">АИ</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7a8a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Поиск по названию, автору, ключевым словам, теме…
+    </div>
+    <span class="chip active">Вид: все</span>
+    <span class="chip">Учебник</span>
+    <span class="chip">Справочник</span>
+    <span class="chip">Методическое пособие</span>
+    <span class="chip">Нормативный документ</span>
+  </div>
+
+  <div class="grid">
+    <!-- Левая колонка: материалы по темам -->
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Материалы библиотеки</h2>
+        <span class="card-note">41 материал&nbsp;•&nbsp;сгруппировано по темам&nbsp;•&nbsp;клик — открыть</span>
+      </div>
+      <div class="mat-list">
+        <div class="mat-group">
+          <div class="mat-group-title">Объекты метаданных</div>
+          <div class="mat-row sel">
+            <div><div class="mat-name">1С:Предприятие 8.3. Версия для обучения программированию</div>
+              <div class="mat-sub">Радченко М. Г., Хрусталёва Е. Ю. · 2023 · PDF, 480 с.</div></div>
+            <div class="mat-kind">Учебник</div>
+          </div>
+          <div class="mat-row">
+            <div><div class="mat-name">1С:Предприятие 8.3 для начинающих разработчиков</div>
+              <div class="mat-sub">Гилёв А. С. · 2021 · PDF, 280 с.</div></div>
+            <div class="mat-kind">Учебник</div>
+          </div>
+          <div class="mat-row">
+            <div><div class="mat-name">ГОСТ Р 7.0.100–2018. Библиографическая запись. Описание</div>
+              <div class="mat-sub">Стандартинформ · 2018 · PDF, 70 с.</div></div>
+            <div class="mat-kind norm">Норм. документ</div>
+          </div>
+        </div>
+        <div class="mat-group">
+          <div class="mat-group-title">Язык запросов</div>
+          <div class="mat-row">
+            <div><div class="mat-name">Язык запросов «1С:Предприятия 8»</div>
+              <div class="mat-sub">Хрусталёва Е. Ю. · 2022 · PDF, 320 с.</div></div>
+            <div class="mat-kind spravochnik">Справочник</div>
+          </div>
+        </div>
+        <div class="mat-group">
+          <div class="mat-group-title">Управляемые формы</div>
+          <div class="mat-row">
+            <div><div class="mat-name">Практическое пособие разработчика. Используем 1С:EDT</div>
+              <div class="mat-sub">Радченко, Хрусталёва · 2023 · PDF, 920 с.</div></div>
+            <div class="mat-kind metod">Метод. пособие</div>
+          </div>
+        </div>
+        <div class="mat-group">
+          <div class="mat-group-title">СКД и отчёты</div>
+          <div class="mat-row">
+            <div><div class="mat-name">Разработка отчётов на СКД 8.3</div>
+              <div class="mat-sub">Хрусталёва Е. Ю. · 2022 · PDF, 240 с.</div></div>
+            <div class="mat-kind metod">Метод. пособие</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Правая колонка: карточка материала -->
+    <div class="card viewer">
+      <div class="card-head"><h2 class="card-title">Карточка материала</h2></div>
+      <div class="cover">
+        <b>1С:Предприятие 8.3</b>
+        <span>Версия для обучения программированию</span>
+      </div>
+      <div class="gost">Радченко М. Г., Хрусталёва Е. Ю. 1С:Предприятие 8.3. Версия для обучения программированию. — М.: ООО «1С-Паблишинг», 2023. — 480 с.</div>
+      <div class="fld"><span class="l">Вид материала</span><span class="v">Учебник</span></div>
+      <div class="fld"><span class="l">Автор</span><span class="v">Радченко М. Г.</span></div>
+      <div class="fld"><span class="l">Год / Издательство</span><span class="v">2023 · 1С-Паблишинг</span></div>
+      <div class="fld"><span class="l">ISBN</span><span class="v">978-5-9677-3001-2</span></div>
+      <div class="fld"><span class="l">Объём</span><span class="v">480 с. · PDF · 18 МБ</span></div>
+      <div class="tags">
+        <div class="card-note" style="margin-bottom:6px">Привязка к темам:</div>
+        <span class="tag">Объекты метаданных</span><span class="tag">Встроенный язык</span>
+      </div>
+      <div class="btns">
+        <div class="btn btn-primary">Читать материал</div>
+        <div class="btn btn-ghost">К заданиям по теме</div>
+      </div>
+      <div class="footer">Хранение: тома БСП «Работа с файлами»</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

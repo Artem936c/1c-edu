@@ -1,0 +1,25 @@
+# Локальный запуск микросервиса IRT рядом с тестовой информационной базой 1С 8.3.
+# Запуск из каталога Конфигурация/deploy:  docker compose up -d --build
+#
+# После старта пропишите адрес сервиса в константу URLМикросервисаIRT конфигурации,
+# например:  http://localhost:8001
+
+services:
+  irt_service:
+    build:
+      # Контекст - каталог микросервиса (в корне репозитория, рядом с Конфигурация/).
+      context: ../../Микросервис_IRT
+      dockerfile: ../Конфигурация/deploy/irt_service.Dockerfile
+    image: irt-service:0.1.0
+    container_name: irt_service
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

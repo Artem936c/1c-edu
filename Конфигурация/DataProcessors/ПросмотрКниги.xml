@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.20">
+	<DataProcessor uuid="053e7019-8be1-410b-955e-cd44b9353e2a">
+		<InternalInfo>
+			<xr:GeneratedType name="DataProcessorObject.ПросмотрКниги" category="Object">
+				<xr:TypeId>696e497c-3434-4c38-8e97-07248a03ad3f</xr:TypeId>
+				<xr:ValueId>1344cfb6-925e-4ea0-be2c-6c465e4c7fb5</xr:ValueId>
+			</xr:GeneratedType>
+			<xr:GeneratedType name="DataProcessorManager.ПросмотрКниги" category="Manager">
+				<xr:TypeId>c00afa01-5a2a-4405-995e-b6421dfa2c75</xr:TypeId>
+				<xr:ValueId>66b1e00a-be6e-48f5-a857-98687a47f383</xr:ValueId>
+			</xr:GeneratedType>
+		</InternalInfo>
+		<Properties>
+			<Name>ПросмотрКниги</Name>
+			<Synonym>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Просмотр книги</v8:content>
+				</v8:item>
+			</Synonym>
+			<Comment>Встроенный просмотр книги материала: предрендеренные PNG-страницы в поле HTML-документа, листание.</Comment>
+			<UseStandardCommands>true</UseStandardCommands>
+			<DefaultForm>DataProcessor.ПросмотрКниги.Form.Форма</DefaultForm>
+			<AuxiliaryForm/>
+			<IncludeHelpInContents>false</IncludeHelpInContents>
+			<ExtendedPresentation/>
+			<Explanation>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Просмотр книги</v8:content>
+				</v8:item>
+			</Explanation>
+		</Properties>
+		<ChildObjects>
+			<Form>Форма</Form>
+			<Template>HTMLШаблонКниги</Template>
+		</ChildObjects>
+	</DataProcessor>
+</MetaDataObject>

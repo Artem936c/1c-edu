@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд обучающегося</title>
+    <!-- Standalone-превью: Chart.js с CDN (в 1С отгружается инлайн+ES2017, см. Template.txt). -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root{
+            --bg:#eef1f5;--surface:#ffffff;--border:#dfe4ea;--text:#26323d;--muted:#6b7a8a;
+            --navy:#1f4e79;--navy2:#2b5d8a;--blue:#2f6fb3;--green:#4f9d69;--orange:#e08a2e;
+            --red:#c8553d;--yellow:#f2b134;
+            --radius:8px;--shadow:0 1px 3px rgba(31,46,64,.10),0 1px 2px rgba(31,46,64,.05);
+            --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PT Sans","Helvetica Neue",Arial,sans-serif;
+        }
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.45}
+        .dashboard{padding:20px;margin:0}
+
+        .topbar{background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;border-radius:var(--radius);
+            padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
+        .topbar-title{font-size:18px;font-weight:700;margin:0}
+        .topbar-subtitle{font-size:12px;color:#cdddf0;margin-top:4px}
+        .topbar-actions{display:flex;align-items:center}
+        .topbar-actions>*{margin-left:10px}
+        .tb-btn{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);
+            color:#fff;border-radius:6px;padding:6px 12px;font-size:12px;text-decoration:none;white-space:nowrap;cursor:pointer}
+        .tb-btn:hover{background:rgba(255,255,255,.25)}
+        .avatar{width:46px;height:46px;border-radius:50%;background:var(--yellow);color:#5a4500;font-weight:700;
+            display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+
+        .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:16px 0}
+        .kpi{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--blue);
+            border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+        .kpi.yellow{border-left-color:var(--yellow)} .kpi.pink{border-left-color:#b86db8}
+        .kpi.blue{border-left-color:var(--blue)} .kpi.green{border-left-color:var(--green)}
+        .kpi-label{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+        .kpi-icon{opacity:.8;cursor:help}
+        .kpi-icon svg{vertical-align:middle}
+        .badge-icon{color:#c9921f} .badge-icon svg{width:26px;height:26px}
+        .bcard-ic{color:#c9921f} .bcard-ic svg{width:24px;height:24px}
+        .bcard.earned .bcard-ic{color:var(--green)}
+        .kpi-value{font-size:30px;font-weight:700;margin:6px 0 2px;letter-spacing:-.5px;color:var(--text)}
+        .kpi.yellow .kpi-value{color:#c9921f}.kpi.green .kpi-value{color:var(--green)}
+        .kpi.blue .kpi-value{color:var(--blue)}.kpi.pink .kpi-value{color:#9c4f9c}
+        .kpi-sub{font-size:11px;color:var(--muted)}
+        .up{color:var(--green)} .down{color:var(--red)}
+
+        .grid-main{display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-bottom:14px}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+        .card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+        .card-title{margin:0;font-size:14px;font-weight:700}
+        .card-note{font-size:11px;color:var(--muted)}
+        .chart-box{position:relative;height:230px;width:100%}
+
+        /* Прогресс по темам */
+        .prog{display:flex;flex-direction:column}
+        .prog-row{display:grid;grid-template-columns:170px 1fr 96px;gap:10px;align-items:center;margin-bottom:11px}
+        .prog-label{font-size:12px}
+        a.prog-label{text-decoration:none;color:var(--text);cursor:pointer}
+        a.prog-label:hover{color:var(--blue);text-decoration:underline}
+        .prog-track{height:14px;background:#eef1f5;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+        .prog-fill{height:100%;border-radius:7px}
+        .prog-meta{font-size:11px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+        .prog-pct{font-weight:700;color:var(--text)}
+        .info-link{text-decoration:none;color:var(--muted);cursor:pointer;margin-left:4px}
+        .info-link:hover{color:var(--blue)}
+
+        /* Рекомендация */
+        .rec-chip{display:inline-block;background:#fdf1dd;border:1px solid #f0d29a;color:#9a6a12;border-radius:6px;
+            padding:5px 10px;font-size:12px;margin-bottom:12px}
+        .rec-topic{font-size:15px;font-weight:700;margin:2px 0 6px}
+        .rec-line{font-size:12px;color:var(--text);margin:3px 0}
+        .rec-line .lbl{color:var(--muted)}
+        .rec-actions{display:flex;margin-top:14px;flex-wrap:wrap}
+        .rec-actions .btn{margin:0 8px 8px 0}
+        .btn{border:none;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer}
+        a.btn{display:inline-block;text-align:center;text-decoration:none}
+        .btn-primary{background:var(--blue);color:#fff} .btn-ghost{background:#eef1f5;color:var(--text);border:1px solid var(--border)}
+
+        /* Рейтинг */
+        .rank{display:flex;flex-direction:column}
+        .rank-row{display:grid;grid-template-columns:26px 1fr auto auto;gap:10px;align-items:center;
+            padding:7px 8px;margin-bottom:6px;border-radius:6px;font-size:12px}
+        .rank-row.self{background:#fdf1dd;border:1px solid #f0d29a;font-weight:700}
+        .rank-badge{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+            font-size:11px;font-weight:700;color:#fff;background:#9aa7b4}
+        .rank-badge.g1{background:#e8b923}.rank-badge.g2{background:#9aa7b4}.rank-badge.g3{background:#c08457}
+        .rank-xp{font-variant-numeric:tabular-nums;color:var(--muted)}
+        .rank-delta{font-variant-numeric:tabular-nums;font-size:11px;min-width:42px;text-align:right}
+        .empty-state{text-align:center;padding:24px;color:var(--muted);font-style:italic}
+
+        /* Мои бейджи */
+        .badges-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+        .badge-item{display:flex;flex-direction:column;align-items:center;text-align:center;
+            padding:10px 6px;border:1px solid var(--border);border-radius:var(--radius);background:#fafbfc}
+        .badge-icon{width:46px;height:46px;border-radius:50%;background:#fdf1dd;display:flex;align-items:center;
+            justify-content:center;font-size:22px;margin-bottom:6px}
+        .badge-name{font-size:12px;font-weight:700;line-height:1.2}
+        .badge-cat{font-size:11px;color:var(--muted)}
+        .badge-date{font-size:10px;color:var(--muted);margin-top:2px}
+
+        /* Материалы библиотеки */
+        .mat-list{display:flex;flex-direction:column;max-height:300px;overflow-y:auto}
+        .mat-row{display:flex;justify-content:space-between;align-items:center;
+            padding:9px 11px;margin-bottom:8px;border:1px solid var(--border);border-radius:6px;text-decoration:none;color:var(--text);cursor:pointer}
+        .mat-row:hover{border-color:var(--blue);background:#f5f9fe}
+        .mat-row>div:first-child{flex:1;min-width:0;padding-right:10px}
+        .mat-name{font-size:12px;font-weight:700;overflow-wrap:anywhere}
+        .mat-sub{font-size:11px;color:var(--muted);margin-top:2px}
+        .mat-kind{flex:none;font-size:11px;color:var(--blue);white-space:nowrap}
+
+        /* Материалы: группы по темам */
+        .mat-group{margin-bottom:12px}
+        .mat-group-title{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;
+            letter-spacing:.3px;margin:2px 0 7px;padding-bottom:3px;border-bottom:1px solid var(--border)}
+
+        /* Ссылка "все бейджи" в шапке карточки */
+        a.card-note{text-decoration:none;cursor:pointer}
+        a.card-note:hover{color:var(--blue);text-decoration:underline}
+
+        /* Оверлей "Все бейджи" */
+        .overlay{display:none;position:fixed;inset:0;background:rgba(31,46,64,.45);z-index:1000;padding:24px;overflow:auto}
+        .overlay.open{display:block}
+        .overlay-card{max-width:1100px;margin:0 auto;background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 30px rgba(0,0,0,.25)}
+        .overlay-head{display:flex;justify-content:space-between;align-items:center;padding:15px 22px;
+            border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);border-radius:var(--radius) var(--radius) 0 0}
+        .overlay-title{margin:0;font-size:16px;font-weight:700}
+        .overlay-close{font-size:24px;line-height:1;color:var(--muted);text-decoration:none;cursor:pointer;padding:0 8px}
+        .overlay-close:hover{color:var(--red)}
+        .overlay-body{padding:16px 22px}
+        .bcat{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin:16px 0 10px}
+        .bcat:first-child{margin-top:0}
+        .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+        .bcard{display:flex;gap:12px;border:1px solid var(--border);border-radius:var(--radius);padding:12px;background:#fafbfc}
+        .bcard.earned{background:#eef7f0;border-color:#bfe0c8}
+        .bcard-ic{width:44px;height:44px;flex:none;border-radius:50%;background:#fdf1dd;display:flex;align-items:center;justify-content:center;font-size:22px}
+        .bcard.earned .bcard-ic{background:#d6efdd}
+        .bcard-main{flex:1;min-width:0}
+        .bcard-name{font-size:13px;font-weight:700}
+        .bcard-desc{font-size:11px;color:var(--muted);margin:2px 0 6px}
+        .bcard-cond{font-size:11px;margin:4px 0}
+        .bcard-reward{font-size:11px;color:#c9921f;font-weight:700;margin-top:5px}
+        .bcard-status{font-size:11px;font-weight:700;margin-top:3px}
+        .bcard-status.got{color:var(--green)}
+        .bprog{height:7px;background:#eef1f5;border-radius:4px;overflow:hidden;border:1px solid var(--border);margin:3px 0 2px}
+        .bprog-fill{height:100%;background:var(--blue)}
+        .bprog-fill.done{background:var(--green)}
+        .bcard-progtext{font-size:10px;color:var(--muted)}
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="topbar">
+        <div>
+            <h1 class="topbar-title">Дашборд обучающегося — платформа для практики по 1С: Предприятие 8.3</h1>
+            <div class="topbar-subtitle" id="subtitle">Загрузка…</div>
+        </div>
+        <div class="topbar-actions">
+            <a class="tb-btn" href="#" data-act="библиотека">Издания библиотеки</a>
+            <a class="tb-btn" href="#" data-act="обновить">Обновить</a>
+            <a class="tb-btn" href="#" data-act="профиль">Профиль</a>
+            <div class="avatar" id="avatar">–</div>
+        </div>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi yellow">
+            <div class="kpi-label">Баллы опыта (XP) <span class="kpi-icon" title="Суммарный опыт за все время обучения"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6 .7-4.4 4 1.2 6L12 16.6 6.9 19.3l1.2-6-4.4-4 6-.7Z"/></svg></span></div>
+            <div class="kpi-value" id="kpi-xp">0</div>
+            <div class="kpi-sub" id="kpi-xp-sub">+0 за неделю</div>
+        </div>
+        <div class="kpi pink">
+            <div class="kpi-label">Бейджей получено <span class="kpi-icon" title="Открыто бейджей из всех доступных"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M8.5 14.5 7 21l5-2.8L17 21l-1.5-6.5"/></svg></span></div>
+            <div class="kpi-value" id="kpi-badges">0 / 0</div>
+            <div class="kpi-sub" id="kpi-badges-sub">Новых: 0</div>
+        </div>
+        <div class="kpi blue">
+            <div class="kpi-label">Позиция в рейтинге группы <span class="kpi-icon" title="Место в группе по сумме опыта"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17.5V21M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.5v1.5A2.5 2.5 0 0 0 7 10M17 6h2.5v1.5A2.5 2.5 0 0 1 17 10"/></svg></span></div>
+            <div class="kpi-value" id="kpi-rank">–</div>
+            <div class="kpi-sub" id="kpi-rank-sub">–</div>
+        </div>
+        <div class="kpi green">
+            <div class="kpi-label">Streak (дней подряд) <span class="kpi-icon" title="Дней подряд с активностью"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s4 3.5 4 8a4 4 0 0 1-8 0c0-2 1-3.2 2-4 0 1.5.8 2.2 1.5 2-1-2 .5-4 .5-6Z"/></svg></span></div>
+            <div class="kpi-value" id="kpi-streak">0 дн.</div>
+            <div class="kpi-sub" id="kpi-streak-sub">Лучший: 0 дн.</div>
+        </div>
+    </div>
+
+    <div class="grid-main">
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title">Прогресс по темам платформы 1С 8.3</h2>
+                <span class="card-note">θ — текущая подготовленность (логиты). Клик по теме — начать тест</span>
+            </div>
+            <div class="prog" id="progress"><div class="empty-state">Нет данных.</div></div>
+        </section>
+        <section class="card">
+            <div class="card-head"><h2 class="card-title">Рекомендация следующего шага</h2></div>
+            <div id="recommendation"><div class="empty-state">Нет рекомендаций.</div></div>
+        </section>
+    </div>
+
+    <div class="grid-main">
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title">Активность за последние 14 дней</h2>
+                <span class="card-note">Начислено XP по дням</span>
+            </div>
+            <div class="chart-box"><canvas id="chart-activity"></canvas></div>
+        </section>
+        <section class="card">
+            <div class="card-head"><h2 class="card-title" id="rank-title">Рейтинг группы</h2></div>
+            <div class="rank" id="rank"><div class="empty-state">Нет данных.</div></div>
+        </section>
+    </div>
+
+    <section class="card" style="margin-bottom:14px">
+        <div class="card-head">
+            <h2 class="card-title">Динамика θ по темам</h2>
+            <span class="card-note">рост подготовленности во времени</span>
+        </div>
+        <div class="chart-box" style="height:300px"><canvas id="chart-theta"></canvas></div>
+    </section>
+
+    <div class="grid-main">
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title">Мои бейджи</h2>
+                <a class="card-note" href="#" data-act="все-бейджи">все бейджи →</a>
+            </div>
+            <div class="badges-gallery" id="badges"><div class="empty-state">Нет данных.</div></div>
+        </section>
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title">Материалы библиотеки</h2>
+                <span class="card-note">клик — открыть</span>
+            </div>
+            <div class="mat-list" id="materials"><div class="empty-state">Нет данных.</div></div>
+        </section>
+    </div>
+</div>
+
+<!-- Оверлей "Все бейджи": наполняется renderAllBadges, показ/скрытие - из формы через DOM (data-act) -->
+<div class="overlay" id="badges-overlay">
+    <div class="overlay-card">
+        <div class="overlay-head">
+            <h2 class="overlay-title">Все бейджи — как их получить</h2>
+            <a class="overlay-close" href="#" data-act="закрыть-бейджи" title="Закрыть">×</a>
+        </div>
+        <div class="overlay-body" id="all-badges"><div class="empty-state">Нет данных.</div></div>
+    </div>
+</div>
+
+<script id="dashboard-data" type="application/json">{{DASHBOARD_DATA}}</script>
+
+<script>
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtTheta(v){if(v==null||isNaN(v))return'–';return(v>=0?'+':'')+Number(v).toFixed(2);}
+function initials(name){if(!name)return'–';const p=String(name).trim().split(/\s+/);return((p[0]||'')[0]||'')+((p[1]||'')[0]||'');}
+function fmtDay(iso){if(!iso)return'';const d=new Date(iso);if(isNaN(d))return iso;return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0');}
+
+/* Иконки - инлайновый SVG: движок HTML-поля 1С не рисует цветные эмодзи
+   (показывает тофу-квадраты), а SVG-вектор отрисовывает как canvas у Chart.js. */
+var ICN={
+star:'<path d="M12 3l2.6 5.6 6 .7-4.4 4 1.2 6L12 16.6 6.9 19.3l1.2-6-4.4-4 6-.7Z"/>',
+award:'<circle cx="12" cy="9" r="6"/><path d="M8.5 14.5 7 21l5-2.8L17 21l-1.5-6.5"/>',
+trophy:'<path d="M8 21h8M12 17.5V21M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4.5v1.5A2.5 2.5 0 0 0 7 10M17 6h2.5v1.5A2.5 2.5 0 0 1 17 10"/>',
+flame:'<path d="M12 3s4 3.5 4 8a4 4 0 0 1-8 0c0-2 1-3.2 2-4 0 1.5.8 2.2 1.5 2-1-2 .5-4 .5-6Z"/>',
+flag:'<path d="M6 21V4M6 4h11l-2.2 3.5L17 11H6"/>',
+users:'<circle cx="9" cy="8" r="3"/><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 0 1 0 5M20.5 19.5a5.5 5.5 0 0 0-3.5-5.1"/>',
+target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
+lock:'<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'
+};
+function icn(n,sz){var s=sz||15;return '<svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICN[n]||ICN.award)+'</svg>';}
+function masteryPct(theta){if(theta==null||theta<=-10||isNaN(theta))return null;return Math.round(100/(1+Math.exp(-theta)));}
+function ordinal(n){return n>0?(n+'-й'):'–';}
+
+const MOCK_DATA = {
+    Пользователь:"Иванов Иван", Группа:"ИСП-3-22", Курс:"Разработка прикладных решений на 1С 8.3", ПорогТета:1.0,
+    ПользовательИД:"00000000-0000-0000-0000-000000000000",
+    KPI:{XPВсего:2480,XPЗаНеделю:340,БейджейПолучено:11,БейджейВсего:24,БейджейНовых:2,Позиция:4,ПозицияИзменение:2,РазмерГруппы:23,StreakТекущий:12,StreakЛучший:18},
+    Прогресс:[
+        {Тема:"Объекты метаданных",Тета:1.42,ТемаИД:""},{Тема:"Язык запросов",Тета:0.95,ТемаИД:""},{Тема:"Встроенный язык программир.",Тета:1.68,ТемаИД:""},
+        {Тема:"Управляемые формы",Тета:0.30,ТемаИД:""},{Тема:"Регистры (сведения, накопл.)",Тета:1.15,ТемаИД:""},{Тема:"СКД и отчеты",Тета:-0.10,ТемаИД:""},{Тема:"Расширения конфигураций",Тета:-0.85,ТемаИД:""}
+    ],
+    Рекомендация:{Есть:true,Тема:"СКД и отчеты",Тета:-0.10,Материал:"СКД 8.3",Автор:"Радченко М. Г.",ТемаИД:"",МатериалИД:""},
+    Активность:(function(){const a=[];const base=new Date("2026-05-11");const v=[340,255,270,330,245,0,310,150,100,170,180,410,410,90];
+        for(let i=0;i<14;i++){const d=new Date(base);d.setDate(d.getDate()+i);a.push({Дата:d.toISOString().slice(0,10),Значение:v[i]});}return a;})(),
+    РейтингГруппы:[
+        {Пользователь:"Смирнов А. А.",СуммаБаллов:3120,Ранг:1,Прирост:450,Свой:false},
+        {Пользователь:"Морозов В. В.",СуммаБаллов:2890,Ранг:2,Прирост:390,Свой:false},
+        {Пользователь:"Козлов Д. Д.",СуммаБаллов:2640,Ранг:3,Прирост:280,Свой:false},
+        {Пользователь:"Иванов И. И.",СуммаБаллов:2480,Ранг:4,Прирост:340,Свой:true},
+        {Пользователь:"Петрова Е. Е.",СуммаБаллов:2310,Ранг:5,Прирост:210,Свой:false},
+        {Пользователь:"Кузнецов К. К.",СуммаБаллов:2180,Ранг:6,Прирост:170,Свой:false}
+    ],
+    Бейджи:[
+        {Название:"Первые шаги",Категория:"Стартовый",Описание:"Завершена первая тема",ДатаВыдачи:"2026-03-02"},
+        {Название:"Знаток метаданных",Категория:"Тематический",Описание:"θ ≥ 1.0 по теме «Объекты метаданных»",ДатаВыдачи:"2026-04-10"},
+        {Название:"Марафонец",Категория:"Мотивационный",Описание:"7 дней подряд занятий",ДатаВыдачи:"2026-05-05"}
+    ],
+    ДинамикаТета:[
+        {Дата:"2026-03-01",Тема:"Объекты метаданных",Тета:0.2},{Дата:"2026-04-15",Тема:"Объекты метаданных",Тета:0.69},
+        {Дата:"2026-03-20",Тема:"Язык запросов",Тета:-0.1},{Дата:"2026-04-15",Тема:"Язык запросов",Тета:0.6},{Дата:"2026-05-05",Тема:"Язык запросов",Тета:1.61},
+        {Дата:"2026-04-15",Тема:"Встроенный язык программирования",Тета:2.4},{Дата:"2026-05-05",Тема:"Встроенный язык программирования",Тета:5.0},
+        {Дата:"2026-03-20",Тема:"Управляемые формы и командный интерфейс",Тета:3.0}
+    ],
+    Материалы:[
+        {Название:"Разработка прикладных решений (учебник)",Автор:"Радченко М. Г.",Вид:"Учебник",Тема:"Объекты метаданных",МатериалИД:"",ТемаИД:""},
+        {Название:"Руководство разработчика 1С",Автор:"Фирма «1С»",Вид:"Справочник",Тема:"Объекты метаданных",МатериалИД:"",ТемаИД:""},
+        {Название:"Язык запросов: практикум",Автор:"Хрусталева Е. Ю.",Вид:"Методичка",Тема:"Язык запросов",МатериалИД:"",ТемаИД:""},
+        {Название:"СКД: сборник примеров",Автор:"",Вид:"Справочник",Тема:"СКД и отчеты",МатериалИД:"",ТемаИД:""}
+    ],
+    МетрикиБейджей:{СуммаБаллов:2480,ЗавершеноТем:4,ЗавершеноКурсов:0,МаксСерия:6},
+    ВсеБейджи:[
+        {Название:"Первые шаги",Категория:"Стартовый",Описание:"Заверши первую тему курса.",НаградаXP:50,Получен:true,ДатаПолучения:"2026-03-02",Условия:[{Тип:"ЗавершеноТем",Порог:1}]},
+        {Название:"Знаток темы",Категория:"Тематический",Описание:"Освой три темы.",НаградаXP:100,Получен:true,ДатаПолучения:"2026-04-10",Условия:[{Тип:"ЗавершеноТем",Порог:3}]},
+        {Название:"Марафонец",Категория:"Мотивационный",Описание:"Дай 10 верных ответов подряд.",НаградаXP:80,Получен:false,ДатаПолучения:"",Условия:[{Тип:"ВерныхОтветовПодряд",Порог:10}]},
+        {Название:"Эрудит",Категория:"Мастерский",Описание:"Накопи 5000 XP опыта.",НаградаXP:200,Получен:false,ДатаПолучения:"",Условия:[{Тип:"СуммаБаллов",Порог:5000}]},
+        {Название:"Выпускник",Категория:"Мастерский",Описание:"Заверши курс целиком.",НаградаXP:300,Получен:false,ДатаПолучения:"",Условия:[{Тип:"ЗавершеноКурсов",Порог:1}]}
+    ]
+};
+
+let chartActivity=null, chartTheta=null;
+
+function initDashboard(data){
+    if(!data){document.querySelector('.dashboard').innerHTML='<div class="empty-state">Нет данных.</div>';return;}
+    // Каждый блок рендерим изолированно: сбой одного (например, графика без
+    // загруженной библиотеки) не должен обрывать отрисовку остальных блоков.
+    const boxes={'Активность':'chart-activity','ДинамикаТета':'chart-theta','Рейтинг':'rank','Бейджи':'badges','Материалы':'materials','Прогресс':'progress','Рекомендация':'recommendation','ВсеБейджи':'all-badges'};
+    const safe=function(name,fn){try{fn(data);}catch(e){
+        console.error('Ошибка блока "'+name+'":',e);
+        var id=boxes[name];var el=id?document.getElementById(id):null;var host=el?(el.parentElement||el):null;
+        if(host){host.innerHTML='<div class="empty-state">Блок "'+name+'" не отрисован: '+esc(e&&e.message?e.message:String(e))+'</div>';}
+    }};
+    safe('Заголовок',renderHeader);
+    safe('KPI',renderKPI);
+    safe('Прогресс',renderProgress);
+    safe('Рекомендация',renderRecommendation);
+    safe('Активность',renderActivity);
+    safe('Рейтинг',renderRank);
+    safe('ДинамикаТета',renderThetaDynamics);
+    safe('Бейджи',renderBadges);
+    safe('Материалы',renderMaterials);
+    safe('ВсеБейджи',renderAllBadges);
+}
+window.initDashboard=initDashboard;
+
+function renderHeader(data){
+    const parts=[data.Пользователь||''];
+    if(data.Группа)parts.push('Группа '+data.Группа);
+    if(data.Курс)parts.push('Курс «'+data.Курс+'»');
+    document.getElementById('subtitle').textContent=parts.join('  •  ');
+    document.getElementById('avatar').textContent=initials(data.Пользователь).toUpperCase()||'–';
+}
+
+function renderKPI(data){
+    const k=data.KPI||{};
+    document.getElementById('kpi-xp').textContent=Number(k.XPВсего||0).toLocaleString('ru-RU');
+    document.getElementById('kpi-xp-sub').textContent=(k.XPЗаНеделю>=0?'+':'')+(k.XPЗаНеделю||0)+' за неделю';
+    document.getElementById('kpi-badges').textContent=(k.БейджейПолучено||0)+' / '+(k.БейджейВсего||0);
+    document.getElementById('kpi-badges-sub').textContent='Новых: '+(k.БейджейНовых||0);
+    document.getElementById('kpi-rank').textContent=ordinal(k.Позиция||0)+' / '+(k.РазмерГруппы||0);
+    const dz=k.ПозицияИзменение||0;
+    const rs=document.getElementById('kpi-rank-sub');
+    if(dz>0){rs.innerHTML='<span class="up">▲ поднялся на '+dz+'</span>';}
+    else if(dz<0){rs.innerHTML='<span class="down">▼ опустился на '+Math.abs(dz)+'</span>';}
+    else{rs.textContent='без изменений';}
+    document.getElementById('kpi-streak').textContent=(k.StreakТекущий||0)+' дн.';
+    document.getElementById('kpi-streak-sub').textContent='Лучший: '+(k.StreakЛучший||0)+' дн.';
+}
+
+function renderProgress(data){
+    const items=data.Прогресс||[];const box=document.getElementById('progress');
+    if(items.length===0){box.innerHTML='<div class="empty-state">Нет данных о прогрессе.</div>';return;}
+    const porog=Number(data.ПорогТета||1);
+    box.innerHTML=items.map(p=>{
+        const pct=masteryPct(p.Тета);
+        const color=(p.Тета>=porog)?'var(--green)':(p.Тета>=0)?'var(--orange)':'var(--red)';
+        const width=(pct==null)?0:pct;
+        const pctTxt=(pct==null)?'–':pct+' %';
+        const ид=esc(p.ТемаИД||'');
+        return '<div class="prog-row">'+
+            '<a class="prog-label" href="#" data-act="старт-тест" data-id="'+ид+'" title="Начать тест по теме">'+esc(p.Тема)+'</a>'+
+            '<div class="prog-track"><div class="prog-fill" style="width:'+width+'%;background:'+color+'"></div></div>'+
+            '<div class="prog-meta"><span class="prog-pct">'+pctTxt+'</span> &nbsp; θ = '+fmtTheta(p.Тета)+
+                ' <a class="info-link" href="#" data-act="тема" data-id="'+ид+'" title="О теме">ⓘ</a></div>'+
+        '</div>';
+    }).join('');
+}
+
+function renderRecommendation(data){
+    const r=data.Рекомендация||{};const box=document.getElementById('recommendation');
+    if(!r.Есть){box.innerHTML='<div class="empty-state">Все темы освоены — рекомендаций нет.</div>';return;}
+    const low=r.Тета<0;
+    const chip=low?('Надо освоить — θ = '+fmtTheta(r.Тета)):('Следующая тема — θ = '+fmtTheta(r.Тета));
+    const ид=esc(r.ТемаИД||'');
+    let material='';
+    if(r.Материал){material='<div class="rec-line"><span class="lbl">Материал:</span> '+esc(r.Автор?(r.Автор+' «'+r.Материал+'»'):r.Материал)+'</div>';}
+    let actions='<div class="rec-actions">';
+    actions+='<a class="btn btn-primary" href="#" data-act="старт-тест" data-id="'+ид+'">Начать тест</a>';
+    if(r.МатериалИД){actions+='<a class="btn btn-ghost" href="#" data-act="материал" data-id="'+esc(r.МатериалИД)+'">Открыть материал</a>';}
+    actions+='<a class="btn btn-ghost" href="#" data-act="тема" data-id="'+ид+'">О теме</a>';
+    actions+='</div>';
+    box.innerHTML=
+        '<div class="rec-chip">'+esc(chip)+'</div>'+
+        '<div class="rec-topic">Тема: «'+esc(r.Тема)+'»</div>'+
+        '<div class="rec-line"><span class="lbl">Статус:</span> доступны короткие материалы</div>'+
+        material+
+        actions;
+}
+
+// Явный размер canvas: движок HTML-поля 1С не всегда отдает высоту контейнера
+// адаптивному режиму Chart.js, поэтому задаем размеры сами (используется с responsive:false).
+function sizeCanvas(canvas,height){
+    var parent=canvas.parentElement;
+    var w=(parent&&parent.clientWidth)?parent.clientWidth:0;
+    if(!w||w<40){w=(canvas.clientWidth>40?canvas.clientWidth:600);}
+    canvas.width=w;canvas.height=height;
+    canvas.style.width=w+'px';canvas.style.height=height+'px';
+}
+
+function renderActivity(data){
+    const pts=data.Активность||[];const box=document.getElementById('chart-activity');
+    if(pts.length===0){box.parentElement.innerHTML='<div class="empty-state">Нет активности.</div>';return;}
+    if(typeof Chart==='undefined'){box.parentElement.innerHTML='<div class="empty-state">Библиотека графиков не загрузилась.</div>';return;}
+    const labels=pts.map(p=>fmtDay(p.Дата));
+    const vals=pts.map(p=>p.Значение||0);
+    const peak=Math.max.apply(null,vals);
+    const colors=vals.map(v=>v>0&&v===peak?'#e08a2e':(v>=200?'#4f9d69':'#2f6fb3'));
+    if(chartActivity)chartActivity.destroy();
+    sizeCanvas(box,230);
+    chartActivity=new Chart(box,{
+        type:'bar',
+        data:{labels:labels,datasets:[{label:'XP',data:vals,backgroundColor:colors}]},
+        options:{responsive:false,maintainAspectRatio:false,devicePixelRatio:1,
+            plugins:{legend:{display:false}},
+            scales:{x:{grid:{display:false}},y:{beginAtZero:true,title:{display:true,text:'XP'}}}}
+    });
+}
+
+function renderRank(data){
+    const rows=data.РейтингГруппы||[];const box=document.getElementById('rank');
+    if(data.Группа)document.getElementById('rank-title').textContent='Рейтинг группы '+data.Группа;
+    if(rows.length===0){box.innerHTML='<div class="empty-state">Нет данных рейтинга.</div>';return;}
+    box.innerHTML=rows.map(r=>{
+        const g=r.Ранг<=3?(' g'+r.Ранг):'';
+        const delta=(r.Прирост>0?'+'+r.Прирост:(r.Прирост||0));
+        return '<div class="rank-row'+(r.Свой?' self':'')+'">'+
+            '<div class="rank-badge'+g+'">'+r.Ранг+'</div>'+
+            '<div>'+esc(r.Пользователь)+'</div>'+
+            '<div class="rank-xp">'+Number(r.СуммаБаллов||0).toLocaleString('ru-RU')+' XP</div>'+
+            '<div class="rank-delta up">'+delta+'</div>'+
+        '</div>';
+    }).join('');
+}
+
+function renderThetaDynamics(data){
+    const points=data.ДинамикаТета||[];const box=document.getElementById('chart-theta');
+    if(points.length===0){box.parentElement.innerHTML='<div class="empty-state">Нет данных о динамике θ.</div>';return;}
+    if(typeof Chart==='undefined'){box.parentElement.innerHTML='<div class="empty-state">Библиотека графиков не загрузилась (нет доступа к CDN).</div>';return;}
+    const byTopic={};
+    points.forEach(p=>{(byTopic[p.Тема]=byTopic[p.Тема]||[]).push({x:p.Дата,y:p.Тета});});
+    const dates=[...new Set(points.map(p=>p.Дата))].sort();
+    const labels=dates.map(fmtDay);
+    const PAL=['#2f6fb3','#4f9d69','#e08a2e','#b86db8','#c8553d','#2b5d8a','#9aa7b4','#e8b923'];
+    const datasets=Object.keys(byTopic).map((topic,i)=>{
+        const m={};byTopic[topic].forEach(p=>{m[p.x]=p.y;});
+        return {label:topic,data:dates.map(d=>m[d]!==undefined?m[d]:null),
+            borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length]+'22',
+            tension:.25,spanGaps:true,pointRadius:3,borderWidth:2};
+    });
+    if(chartTheta)chartTheta.destroy();
+    sizeCanvas(box,300);
+    chartTheta=new Chart(box,{
+        type:'line',
+        data:{labels:labels,datasets:datasets},
+        options:{responsive:false,maintainAspectRatio:false,devicePixelRatio:1,
+            plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:10}}}},
+            scales:{y:{title:{display:true,text:'θ (логиты)'},suggestedMin:-3,suggestedMax:3}}}
+    });
+}
+
+function renderBadges(data){
+    const box=document.getElementById('badges');const badges=data.Бейджи||[];
+    if(badges.length===0){box.innerHTML='<div class="empty-state">Пока нет бейджей.</div>';return;}
+    const icons={'Стартовый':'flag','Тематический':'star','Мастерский':'trophy','Мотивационный':'flame','Командный':'users','Сезонный':'target'};
+    box.innerHTML=badges.map(b=>{
+        const ic=icn(icons[b.Категория]||'award',26);
+        return '<div class="badge-item" title="'+esc(b.Описание||'')+'">'+
+            '<div class="badge-icon">'+ic+'</div>'+
+            '<div class="badge-name">'+esc(b.Название)+'</div>'+
+            '<div class="badge-cat">'+esc(b.Категория)+'</div>'+
+            (b.ДатаВыдачи?'<div class="badge-date">'+fmtDay(b.ДатаВыдачи)+'</div>':'')+
+        '</div>';
+    }).join('');
+}
+
+function renderMaterials(data){
+    const box=document.getElementById('materials');const list=data.Материалы||[];
+    if(list.length===0){box.innerHTML='<div class="empty-state">Нет материалов по курсу.</div>';return;}
+    // Группировка по темам: один материал, привязанный к нескольким темам,
+    // больше не дублируется в общем списке - он попадает в свою тему.
+    const groups=[];const byTopic={};
+    list.forEach(m=>{
+        const key=m.Тема||'';
+        if(!byTopic[key]){byTopic[key]={тема:key,items:[]};groups.push(byTopic[key]);}
+        byTopic[key].items.push(m);
+    });
+    box.innerHTML=groups.map(g=>{
+        const rows=g.items.map(m=>{
+            const sub=m.Автор?esc(m.Автор):'';
+            return '<a class="mat-row" href="#" data-act="материал" data-id="'+esc(m.МатериалИД||'')+'">'+
+                '<div><div class="mat-name">'+esc(m.Название)+'</div>'+(sub?'<div class="mat-sub">'+sub+'</div>':'')+'</div>'+
+                '<div class="mat-kind">'+esc(m.Вид||'')+'</div>'+
+            '</a>';
+        }).join('');
+        return '<div class="mat-group"><div class="mat-group-title">'+esc(g.тема||'Без темы')+'</div>'+rows+'</div>';
+    }).join('');
+}
+
+/* ------- Все бейджи (оверлей) ------------------------------------------ */
+function badgeCondText(c){
+    var n=(c.Порог!=null)?Math.round(c.Порог):0;
+    if(c.Тип==='СуммаБаллов')        return 'Набрать '+n+' XP';
+    if(c.Тип==='ЗавершеноТем')       return 'Освоить тем: '+n;
+    if(c.Тип==='ЗавершеноКурсов')    return 'Завершить курсов: '+n;
+    if(c.Тип==='ВерныхОтветовПодряд')return n+' верных ответов подряд';
+    return esc(c.Тип||'условие')+' ≥ '+n;
+}
+function badgeCondCurrent(type,metrics){
+    if(!metrics)return null;
+    if(type==='СуммаБаллов')        return metrics.СуммаБаллов;
+    if(type==='ЗавершеноТем')       return metrics.ЗавершеноТем;
+    if(type==='ЗавершеноКурсов')    return metrics.ЗавершеноКурсов;
+    if(type==='ВерныхОтветовПодряд')return metrics.МаксСерия;
+    return null;
+}
+function renderAllBadges(data){
+    const box=document.getElementById('all-badges');if(!box)return;
+    const badges=data.ВсеБейджи||[];const metrics=data.МетрикиБейджей||null;
+    if(badges.length===0){box.innerHTML='<div class="empty-state">Бейджи не настроены.</div>';return;}
+    const icons={'Стартовый':'flag','Тематический':'star','Мастерский':'trophy','Мотивационный':'flame','Командный':'users','Сезонный':'target'};
+    // Группировка по категориям (порядок задан сервером).
+    const cats=[];const byCat={};
+    badges.forEach(b=>{const k=b.Категория||'Прочее';if(!byCat[k]){byCat[k]={cat:k,items:[]};cats.push(byCat[k]);}byCat[k].items.push(b);});
+    box.innerHTML=cats.map(g=>{
+        const cards=g.items.map(b=>{
+            const ic=icn(icons[b.Категория]||'award',24);
+            let cond=(b.Условия||[]).map(c=>{
+                let line='<div class="bcard-cond">• '+esc(badgeCondText(c));
+                if(!b.Получен){
+                    const cur=badgeCondCurrent(c.Тип,metrics);const th=(c.Порог!=null?c.Порог:0);
+                    if(cur!=null&&th>0){
+                        const pct=Math.max(0,Math.min(100,Math.round(cur/th*100)));
+                        const done=cur>=th?' done':'';
+                        line+='<div class="bprog"><div class="bprog-fill'+done+'" style="width:'+pct+'%"></div></div>'+
+                              '<div class="bcard-progtext">'+Math.min(cur,Math.round(th))+' / '+Math.round(th)+'</div>';
+                    }
+                }
+                return line+'</div>';
+            }).join('');
+            if(!cond)cond='<div class="bcard-cond" style="color:var(--muted)">Условие не задано</div>';
+            const reward=(b.НаградаXP>0)?'<div class="bcard-reward">Награда: +'+b.НаградаXP+' XP</div>':'';
+            const status=b.Получен
+                ? '<div class="bcard-status got">✓ Получен'+(b.ДатаПолучения?(' • '+fmtDay(b.ДатаПолучения)):'')+'</div>'
+                : '<div class="bcard-status">'+icn('lock',13)+' Ещё не получен</div>';
+            return '<div class="bcard'+(b.Получен?' earned':'')+'">'+
+                '<div class="bcard-ic">'+ic+'</div>'+
+                '<div class="bcard-main">'+
+                    '<div class="bcard-name">'+esc(b.Название)+'</div>'+
+                    (b.Описание?'<div class="bcard-desc">'+esc(b.Описание)+'</div>':'')+
+                    cond+reward+status+
+                '</div>'+
+            '</div>';
+        }).join('');
+        return '<div class="bcat">'+esc(g.cat)+'</div><div class="bgrid">'+cards+'</div>';
+    }).join('');
+}
+
+/* ------- Оверлей "Все бейджи": показ/скрытие ---------------------------- */
+/* Делаем целиком в странице на JS: движок HTML-поля не всегда отражает запись
+   в DOM из BSL, поэтому полагаться на нее для показа оверлея ненадежно.
+   Форма (ПриНажатии) при этих data-act лишь гасит штатную навигацию по href. */
+function toggleBadgesOverlay(show){
+    var ov=document.getElementById('badges-overlay');
+    if(ov)ov.className=show?'overlay open':'overlay';
+}
+document.addEventListener('click',function(ev){
+    // Клик мог прийтись на вложенный текст/стрелку - поднимаемся до data-act.
+    var a=ev.target;
+    while(a&&a.nodeType===1&&!(a.getAttribute&&a.getAttribute('data-act')))a=a.parentNode;
+    var act=(a&&a.nodeType===1&&a.getAttribute)?a.getAttribute('data-act'):null;
+    if(act==='все-бейджи'){ev.preventDefault();toggleBadgesOverlay(true);return;}
+    if(act==='закрыть-бейджи'){ev.preventDefault();toggleBadgesOverlay(false);return;}
+    // Клик по затемненному фону (вне карточки оверлея) - тоже закрываем.
+    if(ev.target&&ev.target.id==='badges-overlay')toggleBadgesOverlay(false);
+},false);
+
+(function start(){
+    const raw=document.getElementById('dashboard-data').textContent.trim();
+    let data;
+    try{data=(raw.indexOf('{{')===0||raw==='')?MOCK_DATA:JSON.parse(raw);}
+    catch(e){console.error('JSON испорчен:',e);data=MOCK_DATA;}
+    initDashboard(data);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test</title>
+    <style>
+        :root{
+            --bg:#eef1f5;--surface:#ffffff;--border:#dfe4ea;--text:#26323d;--muted:#6b7a8a;
+            --navy:#1f4e79;--navy2:#2b5d8a;--blue:#2f6fb3;--blue-soft:#e8f0f9;
+            --green:#4f9d69;--orange:#e08a2e;--red:#c8553d;--yellow:#f2b134;
+            --radius:8px;--shadow:0 1px 3px rgba(31,46,64,.10),0 1px 2px rgba(31,46,64,.05);
+            --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PT Sans","Helvetica Neue",Arial,sans-serif;
+        }
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5}
+        .wrap{padding:20px;margin:0}
+
+        .topbar{background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;border-radius:var(--radius);
+            padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
+        .topbar-title{font-size:16px;font-weight:700;margin:0}
+        .metrics{display:flex;flex-wrap:wrap;text-align:right}
+        .metric{font-size:12px;color:#cdddf0;white-space:nowrap;margin-left:24px}
+        .metric:first-child{margin-left:0}
+        .metric b{display:block;font-size:18px;color:#fff;font-weight:700;letter-spacing:-.3px;margin-top:2px}
+
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+            box-shadow:var(--shadow);padding:18px 20px;margin-top:16px}
+        .q-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+        .q-text{font-size:17px;font-weight:600;white-space:pre-wrap}
+
+        .opts-hint{font-size:12px;color:var(--muted);margin:16px 0 10px}
+        .opts{display:flex;flex-direction:column}
+        .opt{display:flex;align-items:flex-start;background:var(--surface);border:1px solid var(--border);
+            border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:border-color .12s,background .12s}
+        .opt:hover{border-color:var(--blue)}
+        .opt.sel{border-color:var(--blue);background:var(--blue-soft)}
+        .opt input{margin:3px 12px 0 0;flex:none;cursor:pointer;vertical-align:top}
+        .opt .otext{flex:1;white-space:pre-wrap}
+
+        .actions{display:flex;margin-top:20px;flex-wrap:wrap;align-items:center}
+        .actions .btn{margin-right:10px}
+        .btn{display:inline-block;border:none;border-radius:6px;padding:10px 22px;font-size:14px;font-weight:600;
+            cursor:pointer;text-decoration:none;line-height:1.2}
+        .btn-primary{background:var(--blue);color:#fff}
+        .btn-primary.disabled{background:#aebfcf;cursor:default;pointer-events:none}
+        .btn-ghost{background:#eef1f5;color:var(--text);border:1px solid var(--border)}
+        .btn-danger{background:#fff;color:var(--red);border:1px solid #e3b4aa}
+        .spacer{flex:1}
+
+        .info{padding:26px;text-align:center;color:var(--muted);font-size:15px}
+    </style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+
+<script id="test-data" type="application/json">{{TEST_DATA}}</script>
+<script>
+function esc(s){if(s==null)return"";return String(s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+var DATA;
+try{
+    var raw=document.getElementById("test-data").textContent.trim();
+    DATA=(raw.indexOf("{{")===0||raw==="")?null:JSON.parse(raw);
+}catch(e){DATA=null;}
+
+function selectedIds(){
+    var ids=[];
+    var inputs=document.querySelectorAll(".opt input");
+    for(var i=0;i<inputs.length;i++){if(inputs[i].checked)ids.push(inputs[i].getAttribute("data-id"));}
+    return ids;
+}
+
+function refresh(){
+    var ids=selectedIds();
+    var btn=document.getElementById("btn-answer");
+    if(btn){
+        btn.setAttribute("href","cmd:answer:"+ids.join(","));
+        if(ids.length===0)btn.classList.add("disabled"); else btn.classList.remove("disabled");
+    }
+    var rows=document.querySelectorAll(".opt");
+    for(var i=0;i<rows.length;i++){
+        var inp=rows[i].querySelector("input");
+        if(inp&&inp.checked)rows[i].classList.add("sel"); else rows[i].classList.remove("sel");
+    }
+}
+
+function render(){
+    var root=document.getElementById("root");
+    if(!DATA){root.innerHTML='<div class="card info">'+esc("")+'</div>';return;}
+    var L=DATA.labels||{};
+    var html="";
+
+    html+='<div class="topbar">'
+        +'<div class="topbar-title">'+esc(L.title)+'</div>'
+        +'<div class="metrics">'
+        +'<div class="metric">'+esc(L.task)+'<b>'+esc(DATA.num)
+        +(DATA.limit>0?(" "+esc(L.of)+" "+esc(DATA.limit)):"")+'</b></div>'
+        +'<div class="metric">'+esc(L.theta)+'<b>'+esc(DATA.theta)+'</b></div>'
+        +'<div class="metric">'+esc(L.se)+'<b>'+esc(DATA.se)+'</b></div>'
+        +'</div></div>';
+
+    html+='<div class="card">'
+        +'<div class="q-label">'+esc(L.question)+'</div>'
+        +'<div class="q-text">'+esc(DATA.question)+'</div>';
+
+    if(DATA.active){
+        var opts=DATA.options||[];
+        if(opts.length>0){
+            html+='<div class="opts-hint">'+esc(DATA.multiple?L.pickMany:L.pickOne)+'</div>';
+            html+='<div class="opts">';
+            var type=DATA.multiple?"checkbox":"radio";
+            for(var i=0;i<opts.length;i++){
+                html+='<label class="opt">'
+                    +'<input type="'+type+'" name="opt" data-id="'+esc(opts[i].id)+'" onchange="refresh()">'
+                    +'<span class="otext">'+esc(opts[i].text)+'</span></label>';
+            }
+            html+='</div>';
+            html+='<div class="actions">'
+                +'<a id="btn-answer" class="btn btn-primary disabled" href="cmd:answer:">'+esc(L.answer)+'</a>'
+                +'<a class="btn btn-ghost" href="cmd:skip">'+esc(L.skip)+'</a>'
+                +'<span class="spacer"></span>'
+                +'<a class="btn btn-danger" href="cmd:abort">'+esc(L.abort)+'</a>'
+                +'</div>';
+        }else{
+            html+='<div class="opts-hint">'+esc(L.noOptions)+'</div>';
+            html+='<div class="actions"><a class="btn btn-danger" href="cmd:abort">'+esc(L.abort)+'</a></div>';
+        }
+    }
+    html+='</div>';
+    root.innerHTML=html;
+    refresh();
+}
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Form xmlns="http://v8.1c.ru/8.3/xcf/logform" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:dcssch="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcsset="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.20">
+	<Title>
+		<v8:item>
+			<v8:lang>ru</v8:lang>
+			<v8:content>Рабочий стол преподавателя</v8:content>
+		</v8:item>
+	</Title>
+	<ShowTitle>false</ShowTitle>
+	<AutoCommandBar name="ФормаКоманднаяПанель" id="-1"/>
+	<ChildItems>
+		<InputField name="ВыбраннаяГруппаПоле" id="10">
+			<DataPath>ВыбраннаяГруппа</DataPath>
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Учебная группа</v8:content>
+				</v8:item>
+			</Title>
+			<ContextMenu name="ВыбраннаяГруппаПолеКонтекстноеМеню" id="15"/>
+			<ExtendedTooltip name="ВыбраннаяГруппаПолеРасширеннаяПодсказка" id="16"/>
+		</InputField>
+		<Button name="ОткрытьДашбордКнопка" id="11">
+			<Type>UsualButton</Type>
+			<CommandName>Form.Command.ОткрытьДашборд</CommandName>
+			<ExtendedTooltip name="ОткрытьДашбордКнопкаРасширеннаяПодсказка" id="18"/>
+		</Button>
+		<Button name="ОбновитьРейтингКнопка" id="12">
+			<Type>UsualButton</Type>
+			<CommandName>Form.Command.ОбновитьРейтинг</CommandName>
+			<ExtendedTooltip name="ОбновитьРейтингКнопкаРасширеннаяПодсказка" id="19"/>
+		</Button>
+		<Button name="ЗапуститьКалибровкуКнопка" id="13">
+			<Type>UsualButton</Type>
+			<CommandName>Form.Command.ЗапуститьКалибровку</CommandName>
+			<ExtendedTooltip name="ЗапуститьКалибровкуКнопкаРасширеннаяПодсказка" id="20"/>
+		</Button>
+		<Button name="ОткрытьПользователейКнопка" id="14">
+			<Type>UsualButton</Type>
+			<CommandName>Form.Command.ОткрытьПользователей</CommandName>
+			<ExtendedTooltip name="ОткрытьПользователейКнопкаРасширеннаяПодсказка" id="21"/>
+		</Button>
+	</ChildItems>
+	<Attributes>
+		<Attribute name="ВыбраннаяГруппа" id="100">
+			<Type>
+				<v8:Type>cfg:CatalogRef.УчебныеГруппы</v8:Type>
+			</Type>
+			<SavedData>true</SavedData>
+		</Attribute>
+	</Attributes>
+	<Commands>
+		<Command name="ОткрытьДашборд" id="1">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Открыть дашборд</v8:content>
+				</v8:item>
+			</Title>
+			<Action>ОткрытьДашбордВыполнить</Action>
+		</Command>
+		<Command name="ОбновитьРейтинг" id="2">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Обновить рейтинг</v8:content>
+				</v8:item>
+			</Title>
+			<Action>ОбновитьРейтингВыполнить</Action>
+		</Command>
+		<Command name="ЗапуститьКалибровку" id="3">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Запустить калибровку</v8:content>
+				</v8:item>
+			</Title>
+			<Action>ЗапуститьКалибровкуВыполнить</Action>
+		</Command>
+		<Command name="ОткрытьПользователей" id="4">
+			<Title>
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Пользователи</v8:content>
+				</v8:item>
+			</Title>
+			<Action>ОткрытьПользователейВыполнить</Action>
+		</Command>
+	</Commands>
+</Form>

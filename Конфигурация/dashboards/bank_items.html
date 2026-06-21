@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Банк тестовых заданий — управление и калибровка</title>
+<script src="vendor/chart.umd.es2017.min.js"></script>
+<style>
+:root{
+  --bg:#eef1f5;--surface:#ffffff;--border:#dfe4ea;--text:#26323d;--muted:#6b7a8a;
+  --navy:#1f4e79;--navy2:#2b5d8a;--blue:#2f6fb3;--green:#4f9d69;--orange:#e08a2e;
+  --red:#c8553d;--yellow:#f2b134;
+  --radius:8px;--shadow:0 1px 3px rgba(31,46,64,.10),0 1px 2px rgba(31,46,64,.05);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PT Sans","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.45}
+.dashboard{padding:20px}
+.topbar{background:linear-gradient(180deg,var(--navy),var(--navy2));color:#fff;border-radius:var(--radius);
+  padding:16px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
+.topbar-title{font-size:18px;font-weight:700;margin:0}
+.topbar-subtitle{font-size:12px;color:#cdddf0;margin-top:4px}
+.topbar-actions{display:flex;align-items:center}
+.topbar-actions>*{margin-left:10px}
+.tb-btn{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);
+  color:#fff;border-radius:6px;padding:7px 13px;font-size:12px;white-space:nowrap}
+.tb-btn.primary{background:var(--yellow);color:#5a4500;font-weight:700;border-color:var(--yellow)}
+.avatar{width:46px;height:46px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;
+  display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:16px 0}
+.kpi{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--blue);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 16px}
+.kpi.green{border-left-color:var(--green)}.kpi.orange{border-left-color:var(--orange)}.kpi.red{border-left-color:var(--red)}
+.kpi-label{font-size:12px;color:var(--muted)}
+.kpi-value{font-size:26px;font-weight:700;margin:4px 0 0;color:var(--text)}
+.kpi.green .kpi-value{color:var(--green)}.kpi.orange .kpi-value{color:var(--orange)}.kpi.red .kpi-value{color:var(--red)}
+.kpi-sub{font-size:11px;color:var(--muted)}
+
+.toolbar{display:flex;gap:10px;align-items:center;margin:0 0 14px}
+.search{flex:1;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:9px 14px;color:var(--muted);font-size:13px}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:12px;
+  color:var(--text);white-space:nowrap;box-shadow:var(--shadow)}
+.chip.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.card-title{margin:0;font-size:14px;font-weight:700}
+.card-note{font-size:11px;color:var(--muted)}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{text-align:left;background:#f1f5f9;color:var(--navy);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.3px;padding:8px 9px;border-bottom:2px solid var(--border)}
+thead th.num{text-align:right}
+tbody td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody td.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr.sel{background:#eaf3fb;box-shadow:inset 3px 0 0 var(--blue)}
+tbody tr:hover{background:#f5f9fe}
+.kind{display:inline-block;font-size:10px;color:#fff;background:#7a8aa0;border-radius:11px;padding:2px 8px;white-space:nowrap}
+.st{display:inline-block;font-size:10.5px;border-radius:11px;padding:2px 9px;white-space:nowrap;font-weight:600}
+.st.ok{background:#e4f2e8;color:#2f7d4e;border:1px solid #bfe0cb}
+.st.run{background:#fdf0dc;color:#b5750f;border:1px solid #f0d3a0}
+.st.no{background:#f0f2f4;color:#6b7a8a;border:1px solid #dde2e8}
+.qtext{font-weight:600;overflow-wrap:anywhere}
+
+/* карточка задания */
+.fld{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:1px dashed var(--border)}
+.fld .l{color:var(--muted)} .fld .v{font-weight:600;text-align:right}
+.opt{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;margin-bottom:5px}
+.opt .mk{width:16px;height:16px;border-radius:4px;border:1.5px solid #b7c0cb;flex:none}
+.opt.correct{background:#eef7f1;border-color:#bfe0cb}
+.opt.correct .mk{background:var(--green);border-color:var(--green)}
+.irt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.irt .box{background:#f6f8fb;border:1px solid var(--border);border-radius:6px;padding:8px 10px;text-align:center}
+.irt .box .v{font-size:20px;font-weight:700;color:var(--navy)}
+.irt .box .l{font-size:10.5px;color:var(--muted)}
+.chart-box{position:relative;height:200px;margin-top:8px}
+.minihdr{font-size:11px;color:var(--muted);margin:10px 0 6px;font-weight:600}
+.btns{display:flex;gap:10px;margin-top:12px}
+.btn{border-radius:6px;padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer;text-align:center}
+.btn-primary{background:var(--blue);color:#fff;border:1px solid var(--blue)}
+.btn-ghost{background:#fff;color:var(--text);border:1px solid #c3ccd6}
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Банк тестовых заданий — управление и калибровка (IRT)</div>
+      <div class="topbar-subtitle">Преподаватель Петров П. П.&nbsp;•&nbsp;справочник «ТестовыеЗадания» + регистр «ПараметрыIRT»&nbsp;•&nbsp;курс «1С:Предприятие 8.3»</div>
+    </div>
+    <div class="topbar-actions">
+      <span class="tb-btn primary">+ Новое задание</span>
+      <span class="tb-btn">Запустить калибровку</span>
+      <div class="avatar">ПП</div>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Всего заданий</div><div class="kpi-value">60</div><div class="kpi-sub">по 7 темам платформы</div></div>
+    <div class="kpi green"><div class="kpi-label">Откалибровано</div><div class="kpi-value">47</div><div class="kpi-sub">≥ 30 ответов в выборке</div></div>
+    <div class="kpi orange"><div class="kpi-label">Идёт калибровка</div><div class="kpi-value">3</div><div class="kpi-sub">регламентное задание, ночью</div></div>
+    <div class="kpi red"><div class="kpi-label">Не калибровано</div><div class="kpi-value">10</div><div class="kpi-sub">мало ответов (&lt; 30)</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7a8a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Поиск по формулировке, теме, типу задания…
+    </div>
+    <span class="chip active">Тема: все</span>
+    <span class="chip">Тип: все</span>
+    <span class="chip">Статус: откалибровано</span>
+  </div>
+
+  <div class="grid">
+    <!-- Таблица заданий -->
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Задания банка</h2><span class="card-note">b — трудность · a — дискриминативность · версия параметров</span></div>
+      <table>
+        <thead><tr><th>№</th><th>Тема</th><th>Тип</th><th>Формулировка</th><th class="num">b</th><th class="num">a</th><th>Статус</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Объекты метаданных</td><td><span class="kind">Одиночный</span></td><td class="qtext">Объект для хранения списков однородных данных…</td><td class="num">−1,2</td><td class="num">1,4</td><td><span class="st ok">Откалибровано</span></td></tr>
+          <tr class="sel"><td class="num">2</td><td>Язык запросов</td><td><span class="kind">Множественный</span></td><td class="qtext">Какие конструкции допустимы в языке запросов…</td><td class="num">0,3</td><td class="num">1,6</td><td><span class="st ok">Откалибровано</span></td></tr>
+          <tr><td class="num">3</td><td>Объекты метаданных</td><td><span class="kind">Сопоставление</span></td><td class="qtext">Сопоставьте объект конфигурации и его назначение…</td><td class="num">−0,4</td><td class="num">1,1</td><td><span class="st ok">Откалибровано</span></td></tr>
+          <tr><td class="num">4</td><td>Встроенный язык</td><td><span class="kind">Фрагмент кода</span></td><td class="qtext">Допишите процедуру обработчика события…</td><td class="num">1,5</td><td class="num">1,2</td><td><span class="st run">Идёт калибровка</span></td></tr>
+          <tr><td class="num">5</td><td>Управляемые формы</td><td><span class="kind">Одиночный</span></td><td class="qtext">Какое событие формы вызывается при открытии…</td><td class="num">0,8</td><td class="num">1,3</td><td><span class="st ok">Откалибровано</span></td></tr>
+          <tr><td class="num">6</td><td>СКД и отчёты</td><td><span class="kind">Открытый ответ</span></td><td class="qtext">Назовите макет, описывающий структуру отчёта…</td><td class="num">1,1</td><td class="num">0,9</td><td><span class="st no">Не калибровано</span></td></tr>
+          <tr><td class="num">7</td><td>Регистры</td><td><span class="kind">Упорядочивание</span></td><td class="qtext">Упорядочьте этапы записи набора в регистр…</td><td class="num">0,0</td><td class="num">1,5</td><td><span class="st ok">Откалибровано</span></td></tr>
+          <tr><td class="num">8</td><td>Расширения конфигурации</td><td><span class="kind">Одиночный</span></td><td class="qtext">Что нельзя изменить расширением конфигурации…</td><td class="num">2,0</td><td class="num">1,0</td><td><span class="st no">Не калибровано</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Карточка задания -->
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Задание № 2 · Язык запросов</h2><span class="card-note">множественный выбор</span></div>
+      <div style="font-weight:600;margin-bottom:8px">Какие конструкции допустимы в языке запросов «1С:Предприятия 8»?</div>
+      <div class="opt correct"><span class="mk"></span><span>СГРУППИРОВАТЬ ПО … ИМЕЮЩИЕ</span></div>
+      <div class="opt correct"><span class="mk"></span><span>ВЫБРАТЬ РАЗЛИЧНЫЕ … ПЕРВЫЕ N</span></div>
+      <div class="opt"><span class="mk"></span><span>ОБНОВИТЬ … УСТАНОВИТЬ (язык запросов только читает)</span></div>
+      <div class="opt correct"><span class="mk"></span><span>ЛЕВОЕ СОЕДИНЕНИЕ … ПО</span></div>
+
+      <div class="irt">
+        <div class="box"><div class="v">b = 0,30</div><div class="l">Трудность</div></div>
+        <div class="box"><div class="v">a = 1,60</div><div class="l">Дискриминативность</div></div>
+      </div>
+      <div class="fld"><span class="l">Статус калибровки</span><span class="v" style="color:#2f7d4e">Откалибровано (v3)</span></div>
+      <div class="fld"><span class="l">Ответов в выборке</span><span class="v">142</span></div>
+      <div class="fld"><span class="l">Дата калибровки</span><span class="v">14.06.2026 · JMLE</span></div>
+
+      <div class="minihdr">Характеристическая кривая и информация Фишера</div>
+      <div class="chart-box"><canvas id="icc"></canvas></div>
+
+      <div class="btns">
+        <div class="btn btn-primary">Записать и закрыть</div>
+        <div class="btn btn-ghost">Калибровать задание</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const b=0.30, a=1.60;
+const xs=[];for(let t=-3;t<=3.0001;t+=0.25)xs.push(+t.toFixed(2));
+const P=xs.map(t=>1/(1+Math.exp(-a*(t-b))));
+const I=xs.map(t=>{const p=1/(1+Math.exp(-a*(t-b)));return a*a*p*(1-p);});
+new Chart(document.getElementById('icc'),{
+  type:'line',
+  data:{labels:xs,datasets:[
+    {label:'P(θ) — вероятность верного ответа',data:P,borderColor:'#2f6fb3',backgroundColor:'rgba(47,111,179,.08)',borderWidth:2.4,pointRadius:0,tension:.3,yAxisID:'y',fill:true},
+    {label:'I(θ) — информация Фишера',data:I,borderColor:'#e08a2e',borderWidth:2.2,pointRadius:0,tension:.3,yAxisID:'y1',borderDash:[5,3]}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{labels:{boxWidth:14,font:{size:10}}}},
+    scales:{
+      x:{title:{display:true,text:'θ (логиты)',font:{size:10}},ticks:{font:{size:9},maxTicksLimit:7}},
+      y:{position:'left',min:0,max:1,title:{display:true,text:'P(θ)',font:{size:10}},ticks:{font:{size:9}}},
+      y1:{position:'right',min:0,max:0.7,grid:{drawOnChartArea:false},title:{display:true,text:'I(θ)',font:{size:10}},ticks:{font:{size:9}}}
+    }}
+});
+</script>
+</body>
+</html>
